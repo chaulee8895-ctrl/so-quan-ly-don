@@ -643,7 +643,7 @@ function openRow(n){
   $('#dSame').onclick=function(){closeDrawer();S.f.q=r.name;$('#gq').value=r.name;show('list');renderList()};
 }
 function nextStt(){var mx=0;S.rows.slice(-40).forEach(function(r){if(r.stt>mx)mx=r.stt});return mx+1}
-var APP_VER='22 · 08/10/2026';
+var APP_VER='23 · 08/10/2026';
 function toISO(x){x=String(x||'').trim();if(/^\d{4}-\d{2}-\d{2}$/.test(x))return x;var m=x.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2}|\d{4})$/);if(!m)return '';var y=m[3].length===2?'20'+m[3]:m[3],mo=+m[2],da=+m[1];if(mo<1||mo>12||da<1||da>31)return '';return y+'-'+pad(mo)+'-'+pad(da)}
 function whoList(){var a=((S.boot&&S.boot.handlers)||[]).map(function(x){return x.h});return uniq(a.concat(S.rows.map(function(x){return x.who})).filter(function(x){return x&&x!=='(Chưa ghi)'}))}
 function asgHtml(r){if(!(canEdit()&&ce('R')&&r.ed!==0&&(PM().escope||'all')!=='handler'))return '';var hs=(S.boot&&S.boot.handlers)||[];
@@ -862,7 +862,7 @@ window.addEventListener('message',async function(ev){
 function fmtSize(n){return n>1048576?(n/1048576).toFixed(1)+' MB':Math.round(n/1024)+' KB'}
 async function renderSet(){
   var b=S.boot||{},el=$('#v-set');
-  if(!isAdm()){el.innerHTML='<div class="h1">Tài khoản của tôi</div><div class="card" style="max-width:480px"><p><b>'+esc(b.user.name)+'</b> · '+esc(roleName(b.user))+'<br><span class="mut">Tên đăng nhập: '+esc(b.user.username)+'</span></p><button class="btn" id="pwBtn">Đổi mật khẩu</button></div>'+(b.user.perm&&b.user.perm.log?'<div class="card" style="margin-top:12px"><h3>Nhật ký thay đổi trên app <button class="btn sm" id="btnLog">Tải nhật ký</button></h3><div id="logBox" class="mut">Bấm “Tải nhật ký” để xem 100 thao tác gần nhất.</div></div>':'');$('#pwBtn').onclick=changePw;if($('#btnLog'))bindLog();return}
+  if(!isAdm()){el.innerHTML='<div class="h1">Tài khoản của tôi</div><div class="card" style="max-width:480px"><p><b>'+esc(b.user.name)+'</b> · '+esc(roleName(b.user))+'<br><span class="mut">Tên đăng nhập: '+esc(b.user.username)+'</span></p><button class="btn" id="pwBtn">Đổi mật khẩu</button></div>'+(b.user.perm&&b.user.perm.log?'<div class="card" style="margin-top:12px"><h3>Nhật ký thay đổi trên app <button class="btn sm" id="btnLog">Tải nhật ký</button></h3><div id="logBox" class="mut">Bấm “Tải nhật ký” để xem 200 thao tác gần nhất. Nhật ký lưu đầy đủ, mỗi năm một file riêng — tải về để xem toàn bộ.</div></div>':'');$('#pwBtn').onclick=changePw;if($('#btnLog'))bindLog();return}
   el.innerHTML='<div class="h1">Dữ liệu &amp; cài đặt</div><div class="sub">Quản lý nguồn dữ liệu, công cụ tạo phiếu và nhật ký thay đổi</div>'
    +'<div class="grid2"><div class="card"><h3>1. Nguồn dữ liệu (Google Sheet)</h3>'
    +(b.ssId?'<p>Đang dùng: <a href="'+esc(b.ssUrl)+'" target="_blank"><b>'+esc(b.ssName)+'</b></a><br><span class="mut">'+b.sheets.length+' sổ đơn nhận diện được: '+esc(b.sheets.map(function(s){return s.name}).join(', '))+'</span></p>':'<p class="warn">Chưa có dữ liệu. Nạp file Excel sổ đơn hoặc liên kết một Google Sheet có sẵn.</p>')
@@ -872,13 +872,24 @@ async function renderSet(){
    +(b.phieu?'<p>Đã cài: <b>'+esc(b.phieu.name)+'</b> · '+fmtSize(b.phieu.size)+' · cập nhật '+new Date(b.phieu.updated).toLocaleString('vi-VN')+'</p>':'<p class="warn">Chưa cài công cụ tạo phiếu.</p>')
    +'<div class="f"><label>Tải file .html công cụ (ver 5.0 hoặc bản mới hơn)</label><input type="file" id="fph" accept=".html,.htm"></div><div class="prog" id="pgp" style="display:none"><i></i></div><div class="mut" id="msgp"></div></div></div>'
    +'<div class="card"><h3>3. Cài đặt khác</h3><div class="f" style="max-width:360px"><label>Sổ mở mặc định</label><select id="defSh">'+(b.sheets||[]).map(function(s){return '<option'+(s.name===b.defaultSheet?' selected':'')+'>'+esc(s.name)+'</option>'}).join('')+'</select></div><p class="mut">Đang đăng nhập: '+esc(b.user.name)+' (quản trị). Dữ liệu nằm trong Google Sheet của chủ app.</p></div>'
-   +'<div class="card" style="margin-top:12px"><h3>4. Nhật ký thay đổi trên app <button class="btn sm" id="btnLog">Tải nhật ký</button></h3><div id="logBox" class="mut">Bấm “Tải nhật ký” để xem 100 thao tác gần nhất.</div></div>';
+   +'<div class="card" style="margin-top:12px"><h3>4. Nhật ký thay đổi trên app <button class="btn sm" id="btnLog">Tải nhật ký</button></h3><div id="logBox" class="mut">Bấm “Tải nhật ký” để xem 200 thao tác gần nhất. Nhật ký lưu đầy đủ, mỗi năm một file riêng — tải về để xem toàn bộ.</div></div>';
   $('#defSh').onchange=function(){run('setDefaultSheet',this.value).then(function(){toast('Đã lưu','ok')})};
   $('#btnLnk').onclick=async function(){try{S.boot=await run('linkSpreadsheet',$('#lnk').value);toast('Đã liên kết','ok');await boot()}catch(e){toast(e.message,'err',6000)}};
   $('#fxl').onchange=function(){if(this.files[0])uploadFile(this.files[0],'xlsx')};
   $('#fph').onchange=function(){if(this.files[0])uploadFile(this.files[0],'html')};
-  function bindLog(){$('#btnLog').onclick=async function(){var box=$('#logBox');box.innerHTML='<span class="spin"></span>';try{var l=await run('getLog',100);box.innerHTML=l.length?'<div class="tw" style="max-height:340px"><table style="min-width:600px"><tbody>'+l.map(function(x){return '<tr><td style="white-space:nowrap">'+esc(x[0])+'</td><td>'+esc(x[1])+'</td><td>'+esc(x[2])+'</td><td>'+esc(x[3])+' #'+esc(x[4])+'</td><td>'+esc(x[5])+'</td></tr>'}).join('')+'</tbody></table></div>':'Chưa có nhật ký.'}catch(e){box.textContent=e.message}};}bindLog();
+  bindLog();
+  function bindLog(){if($('#btnLog'))$('#btnLog').onclick=function(){loadLog()}}
 }
+var LOGQ={q:''};
+async function loadLog(){var box=$('#logBox');box.innerHTML='<span class="spin"></span> Đang tải nhật ký…';
+ try{var d=await run('getLog',{});var urls=d.urls||{};
+  box.innerHTML='<div class="bar"><input id="lgQ" type="text" placeholder="Lọc nhanh trong 200 thao tác này…" style="flex:1;min-width:200px"><span class="mut">Tải đầy đủ năm:</span><select id="lgY">'+d.years.map(function(y){return '<option>'+esc(y)+'</option>'}).join('')+'</select><button class="btn sm" id="lgX">⬇ Tải nhật ký (Excel)</button>'+(Object.keys(urls).length?'<button class="btn sm" id="lgO">Mở file nhật ký năm</button>':'')+'</div>'
+   +'<div class="mut" style="margin-bottom:6px" id="lgC">200 thao tác gần nhất. Toàn bộ nhật ký được lưu mỗi năm một file riêng — tải về để xem thêm.</div>'
+   +(d.rows.length?'<div class="tw" style="max-height:440px"><table style="min-width:720px"><thead><tr><th>Thời gian</th><th>Tài khoản</th><th>Hành động</th><th>Sổ · dòng</th><th>Ghi chú</th></tr></thead><tbody id="lgB">'+d.rows.map(function(x){return '<tr data-t="'+esc(noacc(x.join(' ')))+'"><td style="white-space:nowrap">'+esc(x[0])+'</td><td>'+esc(x[1])+(x[6]?'<div class="mut">'+esc(x[6])+'</div>':'')+'</td><td>'+esc(x[2])+'</td><td>'+esc(x[3])+(x[4]?' #'+esc(x[4]):'')+'</td><td>'+esc(x[5])+'</td></tr>'}).join('')+'</tbody></table></div>':'<div class="empty">Chưa có thao tác nào.</div>');
+  $('#lgQ').oninput=function(){var q=noacc(this.value).trim(),n=0;$$('#lgB tr').forEach(function(t){var ok=!q||t.dataset.t.indexOf(q)>=0;t.style.display=ok?'':'none';if(ok)n++});$('#lgC').textContent=q?n+' / '+d.rows.length+' thao tác khớp':'200 thao tác gần nhất. Toàn bộ nhật ký được lưu mỗi năm một file riêng — tải về để xem thêm.'};
+  if($('#lgO'))$('#lgO').onclick=function(){var u=urls[$('#lgY').value];if(u)window.open(u,'_blank','noopener');else toast('Năm này chưa có file nhật ký riêng (dữ liệu nằm trong nhật ký cũ) — hãy dùng nút Tải.','err',6000)};
+  $('#lgX').onclick=async function(){var b=this,y=$('#lgY').value;b.disabled=true;b.innerHTML='<span class="spin"></span> Đang tạo file…';try{await needXLSX();var all=await run('getLog',{year:y});var ws=XLSX.utils.aoa_to_sheet([['Thời gian','Tài khoản','Tên','Hành động','Sổ','Dòng','Ghi chú']].concat(all.rows.map(function(x){return [x[0],x[1],x[6],x[2],x[3],x[4],x[5]]})));ws['!cols']=[{wch:20},{wch:14},{wch:18},{wch:32},{wch:24},{wch:7},{wch:60}];var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Nhật ký '+y);XLSX.writeFile(wb,'Nhat_ky_app_'+y+'.xlsx');toast('Đã tải '+all.rows.length+' dòng nhật ký năm '+y,'ok')}catch(e){toast(e.message,'err',7000)}b.disabled=false;b.textContent='⬇ Tải nhật ký (Excel)'};
+ }catch(e){box.innerHTML='<div class="warn">'+esc(e.message)+'</div>'}}
 function readText(file){return new Promise(function(ok,ko){var r=new FileReader();r.onload=function(){ok(r.result)};r.onerror=function(){ko(new Error('Không đọc được file'))};r.readAsText(file,'UTF-8')})}
 function readB64(file){return new Promise(function(ok,ko){var r=new FileReader();r.onload=function(){ok(String(r.result).split(',')[1]||'')};r.onerror=function(){ko(new Error('Không đọc được file'))};r.readAsDataURL(file)})}
 async function uploadFile(file,kind){
