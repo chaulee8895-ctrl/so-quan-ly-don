@@ -172,7 +172,7 @@ function count(arr,fn){var m={};arr.forEach(function(r){var k=fn(r)||'(Chưa ghi
 /* ============ CHUẨN HOÁ DÒNG DỮ LIỆU ============ */
 var RX_DATE=/(\d{1,2})\s*[\/.\-,]\s*(\d{1,2})\s*[\/.\-,]\s*(\d{4})/;
 function normRow(a){
-  var r={row:a[0],A:a[1],B:a[2],C:a[3],D:a[4],E:a[5],F:a[6],G:a[7],H:a[8],I:a[9],J:a[10],K:a[11],L:a[12],M:a[13],N:a[14],O:a[15],P:a[16],Q:a[17],R:a[18],S:a[19],ban:a[20]||''};
+  var r={row:a[0],A:a[1],B:a[2],C:a[3],D:a[4],E:a[5],F:a[6],G:a[7],H:a[8],I:a[9],J:a[10],K:a[11],L:a[12],M:a[13],N:a[14],O:a[15],P:a[16],Q:a[17],R:a[18],S:a[19],ban:a[20]||'',ed:a[21]===undefined?1:a[21]};
   var m=String(r.A).match(/^\s*(\d+)/);r.stt=m?Number(m[1]):0;
   var bl=String(r.B).split('\n');r.soden=(bl.length>1&&/^\s*\d+\s*$/.test(bl[0]))?bl[0].trim():'';
   var d=String(r.B).match(RX_DATE);r.date=d?d[3]+'-'+pad(+d[2])+'-'+pad(+d[1]):'';
@@ -391,7 +391,7 @@ function filtered(){
   });
   var k=S.sort.k,d=S.sort.d;
   rows.sort(function(a,b){var x,y;
-    if(k==='soden'){x=a.soden?parseInt(a.soden,10):-1;y=b.soden?parseInt(b.soden,10):-1}else if(k==='date'){x=a.date||'';y=b.date||''}else if(k==='name'){x=noacc(a.name);y=noacc(b.name)}else if(k==='who'){x=noacc(a.who);y=noacc(b.who)}else if(k==='huong'){x=a.huong;y=b.huong}else{x=a.row;y=b.row}
+    if(k==='soden'){var ma=a.date?a.date.slice(0,7):'',mb=b.date?b.date.slice(0,7):'';if(ma!==mb)return ma<mb?-d:d;x=a.soden?parseInt(a.soden,10):-1;y=b.soden?parseInt(b.soden,10):-1}else if(k==='date'){x=a.date||'';y=b.date||''}else if(k==='name'){x=noacc(a.name);y=noacc(b.name)}else if(k==='who'){x=noacc(a.who);y=noacc(b.who)}else if(k==='huong'){x=a.huong;y=b.huong}else{x=a.row;y=b.row}
     return x<y?-d:x>y?d:(a.row-b.row)*d});
   return rows;
 }
@@ -422,7 +422,8 @@ function xlTable(cur){
   h1+='</tr>';h2+='</tr>';vis.forEach(function(i){h3+='<th>'+esc(String(m.h5&&m.h5[i]||'').replace(/^(\d+)[.,]0+$/,'$1'))+'</th>'});h3+='</tr>';
   var body='',last=null,byRow=(S.sort.k==='row'||S.sort.k==='soden'),LET='ABCDEFGHIJKLMNOPQRS'.split('');
   cur.forEach(function(r){
-    if(byRow&&r.ban!==last){last=r.ban;if(r.ban)body+='<tr class="bn"><td colspan="'+vis.length+'"><span>'+esc(r.ban)+'</span></td></tr>'}
+    var bt=S.sort.k==='soden'?(r.date?'Tháng '+r.date.slice(5,7)+'/'+r.date.slice(0,4):'Chưa rõ ngày nhận'):r.ban;
+    if(byRow&&bt!==last){last=bt;if(bt)body+='<tr class="bn"><td colspan="'+vis.length+'"><span>'+esc(bt)+'</span></td></tr>'}
     var t='<tr class="rw" data-r="'+r.row+'" title="Dòng '+r.row+' trong sổ">';
     vis.forEach(function(i){var L=LET[i],v=r[L];if(L==='B'&&r.date&&!/\n/.test(String(v)))v=dmy(r.date);
       v=v==null?'':String(v);var res=gid[i]>=0,cls=(i<2||(res&&i!==9))?'c':'';
@@ -502,7 +503,7 @@ function openRow(n){
   openDrawer('<div class="dh"><h2>'+esc(r.name||'(không tên)')+'<div class="mut" style="font-weight:400">Dòng '+r.row+' · STT '+esc(String(r.A).replace(/\n/g,' '))+(r.ban?' · '+esc(r.ban):'')+'</div></h2><button class="btn sm" onclick="closeDrawer()">✕</button></div>'
    +'<div class="db"><div class="chips" style="margin-bottom:12px"><span class="badge '+HUONG_CLS[r.huong]+'">'+esc(r.huong)+'</span><span class="badge '+(r.done?'b-gr':'b-rd')+'">'+(r.done?'Đã xử lý':'Chưa xử lý')+'</span>'+(r.date?'<span class="badge b-mu">'+daysFrom(r.date)+' ngày kể từ khi nhận</span>':'')+'</div>'
    +'<dl class="kv">'+kv('Ngày nhận',dmy(r.date)||String(r.B).replace(/\n/g,' '))+kv('Số đến',r.soden)+kv('Địa chỉ',r.addr)+kv('Nguồn đơn / LĐV',r.src)+kv('Loại việc',r.loai)+kv('Nội dung đơn',r.E)+kv('Phòng nghiệp vụ',r.J)+kv('CQĐT',r.K)+kv('VKS / Tòa án',[r.L,r.M].filter(Boolean).join(' • '))+kv('Khác',r.N)+kv('Xếp lưu',r.O)+kv('TBCD',r.P)+kv('Chuyển CQ có TQ / XL / TBCD',r.Q)+kv('Người xử lý',r.who)+kv('VB trả lời đơn',r.S)+'</dl></div>'
-   +'<div class="df">'+(PM().phieu?'<button class="btn pri" id="dPhieu">📝 Tạo phiếu giải quyết</button>':'')+(canEdit()?'<button class="btn" id="dEdit">✎ Sửa</button>':'')+'<button class="btn" id="dCopy">⧉ Sao chép nội dung</button><button class="btn" id="dSame">Đơn cùng người gửi</button></div>');
+   +'<div class="df">'+(PM().phieu?'<button class="btn pri" id="dPhieu">📝 Tạo phiếu giải quyết</button>':'')+(canEdit()&&r.ed!==0?'<button class="btn" id="dEdit">✎ Sửa</button>':'')+'<button class="btn" id="dCopy">⧉ Sao chép nội dung</button><button class="btn" id="dSame">Đơn cùng người gửi</button></div>');
   if($('#dPhieu'))$('#dPhieu').onclick=function(){closeDrawer();S.ctx=r.row;show('phieu')};
   if($('#dEdit'))$('#dEdit').onclick=function(){openForm(r.row)};
   $('#dCopy').onclick=function(){var t=r.name+'\n'+r.addr+'\n'+r.E;var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Đã sao chép','ok')}catch(e){toast('Không sao chép được','err')}ta.remove()};
@@ -512,6 +513,7 @@ function nextStt(){var mx=0;S.rows.slice(-40).forEach(function(r){if(r.stt>mx)mx
 function dl(id,vals){return '<datalist id="'+id+'">'+vals.map(function(v){return '<option value="'+esc(v)+'">'}).join('')+'</datalist>'}
 function openForm(n,pre){
   if(n?!canEdit():!canAdd()){toast(n?'Bạn không có quyền sửa đơn trong sổ này':'Bạn không có quyền thêm đơn trong sổ này','err');return}
+  if(n&&byRow(n)&&byRow(n).ed===0){toast('Bạn không được sửa đơn này (chỉ sửa đơn do mình xử lý / mình tạo theo phân quyền)','err',6000);return}
   if(!n&&!(ce('C')||ce('E'))){toast('Tài khoản chưa được phép nhập họ tên / nội dung nên không thêm được đơn mới','err',6000);return}
   if(!S.rows.length&&!S.sheet){toast('Chưa có dữ liệu để thêm đơn','err');return}
   var m=S.meta||DEF_META,gid=colGroups(m),r=n?byRow(n):null,v=r||{A:String(nextStt()),B:'',name:'',addr:'',soden:'',date:todayISO()};if(pre&&!r)for(var pk in pre)v[pk]=pre[pk];
@@ -815,7 +817,9 @@ function sheetForm(from){
 }
 
 /* ============ TÀI KHOẢN & PHÂN QUYỀN ============ */
-function defPerm(u){return {dash:1,list:1,add:u.role==='editor'?1:0,edit:u.role==='editor'?1:0,export:1,phieu:1,log:0,vcols:'*',ecols:'*',esheets:'*'}}
+function defPerm(u){return {dash:1,list:1,add:u.role==='editor'?1:0,edit:u.role==='editor'?1:0,export:1,phieu:1,log:0,vcols:'*',ecols:'*',esheets:'*',vscope:u.onlyOwn?'handler':'all',escope:u.onlyOwn?'handler':'all'}}
+var ESC={all:'tất cả đơn',handler:'đơn do mình xử lý',creator:'đơn do mình tạo',both:'đơn mình xử lý hoặc mình tạo'};
+function scopeTxt(u){if(u.role==='admin')return '—';var p=u.perm||defPerm(u);var h=(p.vscope==='handler'||p.escope==='handler'||p.escope==='both')&&u.handler?' (xử lý: “'+esc(u.handler)+'”)':'';return 'Xem: '+(p.vscope==='handler'?'đơn do mình xử lý':'tất cả đơn')+'<br>Sửa: '+ESC[p.escope||'all']+h}
 function permSum(u){var p=u.perm||defPerm(u);if(u.role==='admin')return 'Toàn quyền';
   var nv=p.vcols==='*'?19:(p.vcols||[]).length,ne=p.ecols==='*'?19:(p.ecols||[]).length,t=function(k,l){return l+(p[k]?' ✓':' ✗')};
   var es=p.esheets==='*'?'':(' · sửa ở '+((p.esheets||[]).length)+' sổ');
@@ -827,7 +831,7 @@ async function renderUsers(){
   S.users=us;
   el.innerHTML='<div class="h1">Tài khoản &amp; phân quyền</div><div class="sub">Mỗi người dùng một tài khoản. Chọn một mẫu quyền (Quản trị / Cán bộ xử lý / Chỉ xem) rồi chỉnh chi tiết: từng sổ được xem hoặc sửa, từng cột được xem hoặc sửa, và các chức năng thêm đơn, sửa đơn, xuất Excel, tạo phiếu, xem nhật ký.</div>'
    +'<div class="card"><h3>Danh sách tài khoản <button class="btn pri sm" id="uNew">＋ Thêm tài khoản</button></h3><div class="tw" style="max-height:none"><table class="tbl"><thead><tr><th>Tên đăng nhập</th><th>Họ tên</th><th>Quyền</th><th>Sổ được xem</th><th>Quyền chi tiết</th><th>Giới hạn</th><th>Trạng thái</th><th></th></tr></thead><tbody>'
-   +us.map(function(u,i){return '<tr><td><b>'+esc(u.username)+'</b></td><td>'+esc(u.name)+'</td><td>'+esc(ROLE[u.role])+'</td><td>'+(u.sheets==='*'?'Tất cả':esc((u.sheets||[]).join(', ')||'(chưa giao)'))+'</td><td>'+permSum(u)+'</td><td>'+(u.onlyOwn?'Chỉ đơn của “'+esc(u.handler)+'”':'—')+'</td><td>'+(u.active?'<span class="badge b-gr">Hoạt động</span>':'<span class="badge b-rd">Đã khoá</span>')+'</td><td style="text-align:right;white-space:nowrap"><button class="btn sm" data-e="'+i+'">Sửa</button> <button class="btn sm" data-d="'+i+'" style="color:#dc2626">Xoá</button></td></tr>'}).join('')+'</tbody></table></div>'
+   +us.map(function(u,i){return '<tr><td><b>'+esc(u.username)+'</b></td><td>'+esc(u.name)+'</td><td>'+esc(ROLE[u.role])+'</td><td>'+(u.sheets==='*'?'Tất cả':esc((u.sheets||[]).join(', ')||'(chưa giao)'))+'</td><td>'+permSum(u)+'</td><td>'+scopeTxt(u)+'</td><td>'+(u.active?'<span class="badge b-gr">Hoạt động</span>':'<span class="badge b-rd">Đã khoá</span>')+'</td><td style="text-align:right;white-space:nowrap"><button class="btn sm" data-e="'+i+'">Sửa</button> <button class="btn sm" data-d="'+i+'" style="color:#dc2626">Xoá</button></td></tr>'}).join('')+'</tbody></table></div>'
    +'<div class="mut" style="margin-top:10px">Mật khẩu được mã hoá (băm) trước khi lưu, không ai xem lại được. Người dùng tự đổi mật khẩu ở góc dưới thanh bên.</div></div>';
   $('#uNew').onclick=function(){userForm(null)};
   $$('[data-e]',el).forEach(function(b){b.onclick=function(){userForm(us[+b.dataset.e])}});
@@ -849,20 +853,22 @@ function userForm(u){
    +sh.map(function(n,i){return '<div style="'+gr+'"><span>'+esc(n)+'</span><input type="checkbox" data-s="'+i+'" '+(isV(n)?'checked':'')+'><input type="checkbox" data-es="'+i+'" '+(isE(n)?'checked':'')+'></div>'}).join('')
    +'<div style="'+h4+'">2. Chức năng được dùng</div>'
    +'<div class="mut" style="margin-bottom:4px">Các mục trên menu</div>'+pk('dash','Tổng quan (thống kê)')+pk('list','Sổ đơn (bảng danh sách)')+pk('phieu','Tạo phiếu giải quyết')
-   +'<div class="mut" style="margin:8px 0 4px">Thao tác</div>'+pk('add','Thêm đơn mới')+pk('edit','Sửa đơn có sẵn')+pk('export','Xuất Excel')+pk('log','Xem nhật ký thay đổi')
+   +'<div class="mut" style="margin:8px 0 4px">Thao tác</div>'+pk('add','Thêm đơn mới')+pk('edit','Sửa đơn có sẵn')+'<div style="margin:0 0 8px 24px"><div class="mut" style="margin-bottom:2px">Được sửa:</div><select id="uEs"><option value="all">Tất cả đơn</option><option value="handler">Chỉ đơn do mình xử lý</option><option value="creator">Chỉ đơn do mình tạo</option><option value="both">Đơn mình xử lý hoặc mình tạo</option></select></div>'+pk('export','Xuất Excel')+pk('log','Xem nhật ký thay đổi')
    +'<div style="'+h4+'">3. Quyền theo từng cột của sổ</div>'
    +'<div class="chips" style="margin-bottom:8px"><button class="btn sm" type="button" id="cvAll">Xem tất cả</button><button class="btn sm" type="button" id="ceAll">Sửa tất cả</button><button class="btn sm" type="button" id="ceNone">Không sửa cột nào</button></div>'
    +'<div style="'+gr+'" class="mut"><span></span><span>Xem</span><span>Sửa</span></div>'
    +LET19.map(function(L,i){var t=colLabel(i,m);return '<div style="'+gr+'"><span><b>'+L+'</b> · '+esc(t||('Cột '+L))+'</span><input type="checkbox" data-cv="'+L+'" '+(inV(L)?'checked':'')+'><input type="checkbox" data-ce="'+L+'" '+(inE(L)?'checked':'')+'></div>'}).join('')
    +'<div class="mut">Cột không được xem sẽ bị ẩn khỏi bảng, form, xuất Excel (máy chủ không gửi dữ liệu cột đó). Cột chỉ xem thì hiện nhưng không sửa được. Muốn thêm đơn mới, cần cho sửa ít nhất cột C (người gửi) hoặc E (nội dung).</div>'
-   +'<div style="'+h4+'">4. Giới hạn theo người xử lý</div>'
-   +'<label style="'+lb+'"><input type="checkbox" id="uOwn" '+(u.onlyOwn?'checked':'')+'> Chỉ thấy &amp; sửa đơn do mình xử lý</label><div class="f"><label>Tên người xử lý (đúng như cột “Người xử lý đơn”)</label><input id="uH" type="text" value="'+esc(u.handler)+'" list="dlU"></div><datalist id="dlU">'+who.map(function(w){return '<option value="'+esc(w)+'">'}).join('')+'</datalist></div>'
+   +'<div style="'+h4+'">4. Phạm vi đơn được xem</div>'
+   +'<div class="f"><select id="uVs"><option value="all">Xem tất cả đơn</option><option value="handler">Chỉ xem đơn do mình xử lý</option></select></div>'
+   +'<div class="f" id="uHw"><label>Tên người xử lý của tài khoản này (đúng như cột “Người xử lý đơn”) — cần khi chọn phạm vi “đơn do mình xử lý”</label><input id="uH" type="text" value="'+esc(u.handler)+'" list="dlU"></div>'
+   +'<div class="mut">“Đơn do mình tạo” tính từ lúc bật tính năng này: đơn tạo bằng app được ghi nhận người tạo; đơn có sẵn hoặc nhập trực tiếp trong Google Sheet chưa có người tạo (chỉ quản trị hoặc phạm vi khác mới sửa được).</div>'+'<datalist id="dlU">'+who.map(function(w){return '<option value="'+esc(w)+'">'}).join('')+'</datalist></div>'
    +'<label style="display:flex;gap:6px;align-items:center;margin-top:12px"><input type="checkbox" id="uA" '+(u.active?'checked':'')+'> Tài khoản đang hoạt động</label></div>'
    +'<div class="df"><button class="btn pri" id="uGo">'+(isNew?'Tạo tài khoản':'Lưu')+'</button><button class="btn" onclick="closeDrawer()">Huỷ</button></div>');
-  $('#uR').value=u.role;
+  $('#uR').value=u.role;$('#uVs').value=P.vscope||'all';$('#uEs').value=P.escope||'all';
   var PRE={editor:{dash:1,list:1,add:1,edit:1,export:1,phieu:1,log:0},viewer:{dash:1,list:1,add:0,edit:0,export:1,phieu:1,log:0}};
   var setPre=function(role){var p=PRE[role];if(!p)return;Object.keys(p).forEach(function(k){var c=$('[data-pk="'+k+'"]');if(c)c.checked=!!p[k]});
-    $$('[data-cv]').forEach(function(c){c.checked=true});$$('[data-ce]').forEach(function(c){c.checked=role==='editor'});$$('[data-es]').forEach(function(c){c.checked=role==='editor'&&$('[data-s="'+c.dataset.es+'"]').checked})};
+    $$('[data-cv]').forEach(function(c){c.checked=true});$$('[data-ce]').forEach(function(c){c.checked=role==='editor'});$$('[data-es]').forEach(function(c){c.checked=role==='editor'&&$('[data-s="'+c.dataset.es+'"]').checked});$('#uVs').value='all';$('#uEs').value='all'};
   var sync=function(){$('#uSh').classList.toggle('hid',$('#uR').value==='admin')};$('#uR').onchange=function(){setPre($('#uR').value);sync()};sync();
   // sửa ⊂ xem
   $$('[data-ce]').forEach(function(c){c.onchange=function(){if(c.checked)$('[data-cv="'+c.dataset.ce+'"]').checked=true}});
@@ -879,9 +885,10 @@ function userForm(u){
     $$('[data-cv]').forEach(function(c){if(c.checked)vc.push(c.dataset.cv)});
     $$('[data-ce]').forEach(function(c){if(c.checked)ec.push(c.dataset.ce)});
     $$('[data-pk]').forEach(function(c){pm[c.dataset.pk]=c.checked?1:0});
-    pm.vcols=vc;pm.ecols=ec;pm.esheets=es;
+    pm.vcols=vc;pm.ecols=ec;pm.esheets=es;pm.vscope=$('#uVs').value;pm.escope=$('#uEs').value;
+    if($('#uR').value!=='admin'&&(pm.vscope==='handler'||(pm.edit&&(pm.escope==='handler'||pm.escope==='both')))&&!$('#uH').value.trim()){toast('Hãy nhập tên người xử lý của tài khoản (đúng như cột R) để dùng phạm vi “đơn do mình xử lý”','err',7000);return}
     if($('#uR').value!=='admin'&&pm.add&&!ec.some(function(x){return x==='C'||x==='E'})){toast('Đã cho “Thêm đơn mới” thì cần cho sửa ít nhất cột C hoặc E','err',6000);return}
-    var o={username:$('#uU').value,name:$('#uN').value,role:$('#uR').value,sheets:$('#uR').value==='admin'?'*':sel,perm:$('#uR').value==='admin'?null:pm,onlyOwn:$('#uOwn').checked,handler:$('#uH').value,active:$('#uA').checked,password:$('#uP').value};
+    var o={username:$('#uU').value,name:$('#uN').value,role:$('#uR').value,sheets:$('#uR').value==='admin'?'*':sel,perm:$('#uR').value==='admin'?null:pm,onlyOwn:pm.vscope==='handler',handler:$('#uH').value,active:$('#uA').checked,password:$('#uP').value};
     this.disabled=true;try{await run('saveUser',o,isNew);closeDrawer();toast('Đã lưu tài khoản','ok');renderUsers()}catch(e){toast(e.message,'err',7000);this.disabled=false}
   };
 }
