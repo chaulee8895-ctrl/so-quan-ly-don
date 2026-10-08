@@ -258,7 +258,10 @@ async function boot(){
   showLogin();
   if(S.st&&S.st.owner&&!ssGet('sd_noauto')&&$('#lG'))$('#lG').click();
 }
-var ROLE={admin:'Quản trị',editor:'Cán bộ xử lý',viewer:'Chỉ xem'};
+var ROLE={admin:'Quản trị',editor:'Cán bộ xử lý',viewer:'Chỉ xem',manager:'Quản lý đơn',updater:'Cán bộ xử lý (cập nhật đơn được giao)'};
+var UPD_LOCK=['A','B','C','D','R'];
+function roleKind(u){if(!u)return '';if(u.role==='admin')return 'admin';if(u.role==='viewer')return 'viewer';var P=u.perm||defPerm(u);if(P.add&&P.edit&&(P.escope||'all')==='all')return 'manager';if(!P.add&&P.edit&&P.escope==='handler')return 'updater';return 'editor'}
+function roleName(u){return ROLE[roleKind(u)]||ROLE[u.role]||u.role}
 function isAdm(){return !!(S.boot&&S.boot.user&&S.boot.user.role==='admin')}
 function PM(){return (S.boot&&S.boot.user&&S.boot.user.perm)||{}}
 function cv(L){var p=PM();return !p.vcols||p.vcols==='*'||p.vcols.indexOf(L)>=0}
@@ -269,7 +272,7 @@ function canEdit(){return !!PM().edit&&shOK()}
 function canWr(){return canAdd()}
 function applyRole(){
   var u=S.boot.user;
-  $('#who').innerHTML='<b>'+esc(u.name)+'</b><span class="rolebadge">'+esc(ROLE[u.role]||u.role)+'</span><div class="mut">'+esc(u.username)+'</div><div class="lk"><a id="aPw">Đổi mật khẩu</a><a id="aOut">Đăng xuất</a></div>';
+  $('#who').innerHTML='<b>'+esc(u.name)+'</b><span class="rolebadge">'+esc(roleName(u))+'</span><div class="mut">'+esc(u.username)+'</div><div class="lk"><a id="aPw">Đổi mật khẩu</a><a id="aOut">Đăng xuất</a></div>';
   $('#who').insertAdjacentHTML('beforeend','<div class="mut" style="font-size:11px;margin-top:4px">Phiên bản app: '+APP_VER+'</div>');
   $('#aPw').onclick=changePw;$('#aOut').onclick=doLogout;
   $$('.adm').forEach(function(e){e.classList.toggle('hid',!isAdm())});
@@ -511,7 +514,7 @@ function filtered(){
   });
   var k=S.sort.k,d=S.sort.d;
   rows.sort(function(a,b){var x,y;
-    if(k==='soden'){var ma=a.date?a.date.slice(0,7):'',mb=b.date?b.date.slice(0,7):'';if(ma!==mb)return ma<mb?-d:d;x=a.stt||0;y=b.stt||0}else if(k==='date'){x=a.date||'';y=b.date||''}else if(k==='name'){x=noacc(a.name);y=noacc(b.name)}else if(k==='who'){x=noacc(a.who);y=noacc(b.who)}else if(k==='huong'){x=a.huong;y=b.huong}else{x=a.row;y=b.row}
+    if(k==='soden'){x=a.stt||0;y=b.stt||0}else if(k==='date'){x=a.date||'';y=b.date||''}else if(k==='name'){x=noacc(a.name);y=noacc(b.name)}else if(k==='who'){x=noacc(a.who);y=noacc(b.who)}else if(k==='huong'){x=a.huong;y=b.huong}else{x=a.row;y=b.row}
     return x<y?-d:x>y?d:(a.row-b.row)*d});
   return rows;
 }
@@ -520,7 +523,7 @@ function opt(label,vals,cur,all){return '<select data-f="'+label+'"><option valu
 var DEF_META={title:'',h3:['STT','Ngày \nnhận đơn','Họ và tên người gửi đơn','Nguồn \nđơn/ LĐV yêu cầu BC','Nội dung đơn','Loại việc','Kết quả xử lý','','','','','','','','','','','Người \nxử lý đơn','VB trả\n lời đơn'],
  h4:['','','','','','','phân \nloại việc','Đơn thuộc\n TQ giải quyết','Đơn thuộc\n TQ KS','phòng nghiệp vụ','CQĐT','VKS','TÒA ÁN','KHÁC','XẾP LƯU','TBCD','Đơn chuyển CQ có TQ/ chuyển Phòng NV/ Xếp lưu/ TBCD','',''],
  h5:['1','2','3','','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18'],hidden:[],widths:[52,78,150,90,300,70,70,80,70,100,80,80,70,70,70,70,140,80,170]};
-var SORTK={0:'row',1:'soden',2:'name',17:'who'};
+var SORTK={0:'soden',1:'date',2:'name',17:'who'};
 function oldHead(th){return '<tr><th>STT</th>'+th('date','Ngày nhận')+th('name','Người gửi đơn')+'<th style="min-width:280px">Nội dung đơn</th><th>Nguồn / Loại</th>'+th('huong','Hướng xử lý')+th('who','Người xử lý')+'<th>VB trả lời</th></tr>'}
 function oldBody(cur){return cur.length?cur.map(function(r){return '<tr class="rw" data-r="'+r.row+'"><td>'+esc(String(r.A).split('\n')[0])+'<div class="mut">'+(r.soden?'đến '+esc(r.soden):'')+'</div></td><td style="white-space:nowrap">'+esc(dmy(r.date)||String(r.B).split('\n').pop())+'</td><td><b>'+esc(r.name)+'</b><div class="mut clamp">'+esc(r.addr)+'</div></td><td><div class="clamp">'+esc(r.E)+'</div></td><td>'+esc(r.src)+'<div class="mut">'+esc(r.loai)+'</div></td><td><span class="badge '+HUONG_CLS[r.huong]+'">'+esc(r.huong)+'</span><div class="mut clamp">'+esc(r.noi)+'</div></td><td>'+esc(r.who)+'</td><td>'+(String(r.S).trim()?'<span class="badge b-gr" title="'+esc(r.S)+'">✓ Có</span>':'')+'</td></tr>'}).join(''):'<tr><td colspan="8" class="empty">Không có đơn phù hợp</td></tr>'}
 function colGroups(m){ // nhóm cột suy từ dòng 3-4: cột có dòng 3 và dòng 4 = đầu nhóm; cột chỉ có dòng 4 = thành viên nhóm đứng trước
@@ -540,9 +543,9 @@ function xlTable(cur){
     h1+='<th rowspan="2"'+(k?' data-s="'+k+'"':'')+'>'+esc(t)+(k?ar(k):'')+'</th>';
   });
   h1+='</tr>';h2+='</tr>';vis.forEach(function(i){h3+='<th>'+esc(String(m.h5&&m.h5[i]||'').replace(/^(\d+)[.,]0+$/,'$1'))+'</th>'});h3+='</tr>';
-  var body='',last=null,byRow=(S.sort.k==='row'||S.sort.k==='soden'),LET='ABCDEFGHIJKLMNOPQRS'.split('');
+  var body='',last=null,byRow=(S.sort.k==='row'),LET='ABCDEFGHIJKLMNOPQRS'.split('');
   cur.forEach(function(r){
-    var bt=S.sort.k==='soden'?(r.date?'Tháng '+r.date.slice(5,7)+'/'+r.date.slice(0,4):'Chưa rõ ngày nhận'):r.ban;
+    var bt=r.ban;
     if(byRow&&bt!==last){last=bt;if(bt)body+='<tr class="bn"><td colspan="'+vis.length+'"><span>'+esc(bt)+'</span></td></tr>'}
     var t='<tr class="rw" data-r="'+r.row+'" title="Dòng '+r.row+' trong sổ">';
     vis.forEach(function(i){var L=LET[i],v=r[L];if(L==='B'&&r.date&&!/\n/.test(String(v)))v=dmy(r.date);
@@ -631,16 +634,21 @@ function openRow(n){
   var kv=function(k,v){return v?'<dt>'+k+'</dt><dd>'+esc(v)+'</dd>':''};
   openDrawer('<div class="dh"><h2>'+esc(r.name||'(không tên)')+'<div class="mut" style="font-weight:400">Dòng '+r.row+' · STT '+esc(String(r.A).replace(/\n/g,' '))+(r.ban?' · '+esc(r.ban):'')+'</div></h2><button class="btn sm" onclick="closeDrawer()">✕</button></div>'
    +'<div class="db"><div class="chips" style="margin-bottom:12px"><span class="badge '+HUONG_CLS[r.huong]+'">'+esc(r.huong)+'</span><span class="badge '+(r.done?'b-gr':'b-rd')+'">'+(r.done?'Đã xử lý':'Chưa xử lý')+'</span>'+(r.date?'<span class="badge b-mu">'+daysFrom(r.date)+' ngày kể từ khi nhận</span>':'')+'</div>'
-   +'<dl class="kv">'+kv('Ngày nhận',dmy(r.date)||String(r.B).replace(/\n/g,' '))+kv('Số đến',r.soden)+kv('Địa chỉ',r.addr)+kv('Nguồn đơn / LĐV',r.src)+kv('Loại việc',r.loai)+kv('Nội dung đơn',r.E)+kv('Phòng nghiệp vụ',r.J)+kv('CQĐT',r.K)+kv('VKS / Tòa án',[r.L,r.M].filter(Boolean).join(' • '))+kv('Khác',r.N)+kv('Xếp lưu',r.O)+kv('TBCD',r.P)+kv('Chuyển CQ có TQ / XL / TBCD',r.Q)+kv('Người xử lý',r.who)+kv('VB trả lời đơn',r.S)+'</dl></div>'
+   +'<dl class="kv">'+kv('Ngày nhận',dmy(r.date)||String(r.B).replace(/\n/g,' '))+kv('Số đến',r.soden)+kv('Địa chỉ',r.addr)+kv('Nguồn đơn / LĐV',r.src)+kv('Loại việc',r.loai)+kv('Nội dung đơn',r.E)+kv('Phòng nghiệp vụ',r.J)+kv('CQĐT',r.K)+kv('VKS / Tòa án',[r.L,r.M].filter(Boolean).join(' • '))+kv('Khác',r.N)+kv('Xếp lưu',r.O)+kv('TBCD',r.P)+kv('Chuyển CQ có TQ / XL / TBCD',r.Q)+kv('Người xử lý',r.who)+kv('VB trả lời đơn',r.S)+'</dl>'+asgHtml(r)+'</div>'
    +'<div class="df">'+(PM().phieu?'<button class="btn pri" id="dPhieu">📝 Tạo phiếu giải quyết</button>':'')+(canEdit()&&r.ed!==0?'<button class="btn" id="dEdit">✎ Sửa</button>':'')+'<button class="btn" id="dCopy">⧉ Sao chép nội dung</button><button class="btn" id="dSame">Đơn cùng người gửi</button></div>');
   if($('#dPhieu'))$('#dPhieu').onclick=function(){closeDrawer();S.ctx=r.row;show('phieu')};
+  if($('#dAsgGo'))$('#dAsgGo').onclick=async function(){var v=$('#dAsg').value.trim();if(v===String(r.R||'').trim()){toast('Chưa đổi người xử lý');return}this.disabled=true;try{await run('saveRecord',S.sheet,r.row,{R:v,_sig:r.C});toast(v?'Đã giao đơn cho '+v:'Đã bỏ người xử lý','ok');closeDrawer();await loadData(false)}catch(e){toast(e.message,'err',7000);this.disabled=false}};
   if($('#dEdit'))$('#dEdit').onclick=function(){openForm(r.row)};
   $('#dCopy').onclick=function(){var t=r.name+'\n'+r.addr+'\n'+r.E;var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Đã sao chép','ok')}catch(e){toast('Không sao chép được','err')}ta.remove()};
   $('#dSame').onclick=function(){closeDrawer();S.f.q=r.name;$('#gq').value=r.name;show('list');renderList()};
 }
 function nextStt(){var mx=0;S.rows.slice(-40).forEach(function(r){if(r.stt>mx)mx=r.stt});return mx+1}
-var APP_VER='20 · 08/10/2026';
+var APP_VER='21 · 08/10/2026';
 function toISO(x){x=String(x||'').trim();if(/^\d{4}-\d{2}-\d{2}$/.test(x))return x;var m=x.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2}|\d{4})$/);if(!m)return '';var y=m[3].length===2?'20'+m[3]:m[3],mo=+m[2],da=+m[1];if(mo<1||mo>12||da<1||da>31)return '';return y+'-'+pad(mo)+'-'+pad(da)}
+function whoList(){var a=((S.boot&&S.boot.handlers)||[]).map(function(x){return x.h});return uniq(a.concat(S.rows.map(function(x){return x.who})).filter(function(x){return x&&x!=='(Chưa ghi)'}))}
+function asgHtml(r){if(!(canEdit()&&ce('R')&&r.ed!==0&&(PM().escope||'all')!=='handler'))return '';var hs=(S.boot&&S.boot.handlers)||[];
+  return '<div class="card" style="margin-top:12px;padding:10px"><div style="font-weight:600;margin-bottom:6px">Phân đơn — giao cho người xử lý</div><div style="display:flex;gap:6px"><input id="dAsg" type="text" list="dlAsg" value="'+esc(r.R||'')+'" placeholder="Chọn hoặc gõ tên người xử lý"><button class="btn pri" id="dAsgGo">Giao</button></div>'
+   +'<datalist id="dlAsg">'+whoList().map(function(w){var h=hs.filter(function(x){return x.h===w})[0];return '<option value="'+esc(w)+'">'+(h?esc(h.n):'')+'</option>'}).join('')+'</datalist><div class="mut" style="margin-top:4px">Cán bộ có tên ở ô này (đúng tên người xử lý trong tài khoản) sẽ được cập nhật đơn.</div></div>'}
 function nextSoden(){var mx=0;S.rows.forEach(function(r){var n=r.soden?parseInt(r.soden,10):0;if(n>mx)mx=n});return mx?String(mx+1):''}
 function dl(id,vals){return '<datalist id="'+id+'">'+vals.map(function(v){return '<option value="'+esc(v)+'">'}).join('')+'</datalist>'}
 function openForm(n,pre){
@@ -650,7 +658,7 @@ function openForm(n,pre){
   if(!S.rows.length&&!S.sheet){toast('Chưa có dữ liệu để thêm đơn','err');return}
   var m=S.meta||DEF_META,gid=colGroups(m),r=n?byRow(n):null,v=r||{A:String(nextStt()),B:'',name:'',addr:'',soden:nextSoden(),date:todayISO()};if(pre&&!r)for(var pk in pre)v[pk]=pre[pk];
   var show=function(i){return i<5||!(m.hidden&&m.hidden[i])};
-  var who=uniq(S.rows.map(function(x){return x.who})),lab=function(i){var t=colLabel(i,m),nn=String(m.h5&&m.h5[i]||'').trim();return esc(t||('Cột '+LET19[i]))+(nn?' <span class="mut">(cột '+esc(nn)+')</span>':'')};
+  var who=whoList(),lab=function(i){var t=colLabel(i,m),nn=String(m.h5&&m.h5[i]||'').trim();return esc(t||('Cột '+LET19[i]))+(nn?' <span class="mut">(cột '+esc(nn)+')</span>':'')};
   var val=function(L){var x=v[L];return x==null?'':String(x)};
   var inp=function(id,labh,value,cls,ls){return '<div class="f '+(cls||'')+'"><label>'+labh+'</label><input type="text" id="'+id+'" value="'+esc(value)+'"'+(ls?' list="'+ls+'"':'')+'></div>'};
   var area=function(id,labh,value,rows,cls){return '<div class="f '+(cls||'full')+'"><label>'+labh+'</label><textarea id="'+id+'" rows="'+rows+'">'+esc(value)+'</textarea></div>'};
@@ -845,7 +853,7 @@ window.addEventListener('message',async function(ev){
 function fmtSize(n){return n>1048576?(n/1048576).toFixed(1)+' MB':Math.round(n/1024)+' KB'}
 async function renderSet(){
   var b=S.boot||{},el=$('#v-set');
-  if(!isAdm()){el.innerHTML='<div class="h1">Tài khoản của tôi</div><div class="card" style="max-width:480px"><p><b>'+esc(b.user.name)+'</b> · '+esc(ROLE[b.user.role])+'<br><span class="mut">Tên đăng nhập: '+esc(b.user.username)+'</span></p><button class="btn" id="pwBtn">Đổi mật khẩu</button></div>'+(b.user.perm&&b.user.perm.log?'<div class="card" style="margin-top:12px"><h3>Nhật ký thay đổi trên app <button class="btn sm" id="btnLog">Tải nhật ký</button></h3><div id="logBox" class="mut">Bấm “Tải nhật ký” để xem 100 thao tác gần nhất.</div></div>':'');$('#pwBtn').onclick=changePw;if($('#btnLog'))bindLog();return}
+  if(!isAdm()){el.innerHTML='<div class="h1">Tài khoản của tôi</div><div class="card" style="max-width:480px"><p><b>'+esc(b.user.name)+'</b> · '+esc(roleName(b.user))+'<br><span class="mut">Tên đăng nhập: '+esc(b.user.username)+'</span></p><button class="btn" id="pwBtn">Đổi mật khẩu</button></div>'+(b.user.perm&&b.user.perm.log?'<div class="card" style="margin-top:12px"><h3>Nhật ký thay đổi trên app <button class="btn sm" id="btnLog">Tải nhật ký</button></h3><div id="logBox" class="mut">Bấm “Tải nhật ký” để xem 100 thao tác gần nhất.</div></div>':'');$('#pwBtn').onclick=changePw;if($('#btnLog'))bindLog();return}
   el.innerHTML='<div class="h1">Dữ liệu &amp; cài đặt</div><div class="sub">Quản lý nguồn dữ liệu, công cụ tạo phiếu và nhật ký thay đổi</div>'
    +'<div class="grid2"><div class="card"><h3>1. Nguồn dữ liệu (Google Sheet)</h3>'
    +(b.ssId?'<p>Đang dùng: <a href="'+esc(b.ssUrl)+'" target="_blank"><b>'+esc(b.ssName)+'</b></a><br><span class="mut">'+b.sheets.length+' sổ đơn nhận diện được: '+esc(b.sheets.map(function(s){return s.name}).join(', '))+'</span></p>':'<p class="warn">Chưa có dữ liệu. Nạp file Excel sổ đơn hoặc liên kết một Google Sheet có sẵn.</p>')
@@ -1011,7 +1019,7 @@ async function renderUsers(){
   S.users=us;
   el.innerHTML='<div class="h1">Tài khoản &amp; phân quyền</div><div class="sub">Mỗi người dùng một tài khoản. Chọn một mẫu quyền (Quản trị / Cán bộ xử lý / Chỉ xem) rồi chỉnh chi tiết: từng sổ được xem hoặc sửa, từng cột được xem hoặc sửa, và các chức năng thêm đơn, sửa đơn, xuất Excel, tạo phiếu, xem nhật ký.</div>'
    +'<div class="card"><h3>Danh sách tài khoản <button class="btn pri sm" id="uNew">＋ Thêm tài khoản</button></h3><div class="tw" style="max-height:none"><table class="tbl"><thead><tr><th>Tên đăng nhập</th><th>Họ tên</th><th>Quyền</th><th>Sổ được xem</th><th>Quyền chi tiết</th><th>Giới hạn</th><th>Trạng thái</th><th></th></tr></thead><tbody>'
-   +us.map(function(u,i){return '<tr><td><b>'+esc(u.username)+'</b></td><td>'+esc(u.name)+'</td><td>'+esc(ROLE[u.role])+'</td><td>'+(u.sheets==='*'?'Tất cả':esc((u.sheets||[]).join(', ')||'(chưa giao)'))+'</td><td>'+permSum(u)+'</td><td>'+scopeTxt(u)+'</td><td>'+(u.active?'<span class="badge b-gr">Hoạt động</span>':'<span class="badge b-rd">Đã khoá</span>')+'</td><td style="text-align:right;white-space:nowrap"><button class="btn sm" data-e="'+i+'">Sửa</button> <button class="btn sm" data-d="'+i+'" style="color:#dc2626">Xoá</button></td></tr>'}).join('')+'</tbody></table></div>'
+   +us.map(function(u,i){return '<tr><td><b>'+esc(u.username)+'</b></td><td>'+esc(u.name)+'</td><td>'+esc(roleName(u))+'</td><td>'+(u.sheets==='*'?'Tất cả':esc((u.sheets||[]).join(', ')||'(chưa giao)'))+'</td><td>'+permSum(u)+'</td><td>'+scopeTxt(u)+'</td><td>'+(u.active?'<span class="badge b-gr">Hoạt động</span>':'<span class="badge b-rd">Đã khoá</span>')+'</td><td style="text-align:right;white-space:nowrap"><button class="btn sm" data-e="'+i+'">Sửa</button> <button class="btn sm" data-d="'+i+'" style="color:#dc2626">Xoá</button></td></tr>'}).join('')+'</tbody></table></div>'
    +'<div class="mut" style="margin-top:10px">Mật khẩu được mã hoá (băm) trước khi lưu, không ai xem lại được. Người dùng tự đổi mật khẩu ở góc dưới thanh bên.</div></div>';
   $('#uNew').onclick=function(){userForm(null)};
   $$('[data-e]',el).forEach(function(b){b.onclick=function(){userForm(us[+b.dataset.e])}});
@@ -1026,7 +1034,7 @@ function userForm(u){
   var pk=function(k,l){return '<label style="'+lb+'"><input type="checkbox" data-pk="'+k+'" '+(P[k]?'checked':'')+'> '+l+'</label>'};
   openDrawer('<div class="dh"><h2>'+(isNew?'Thêm tài khoản':'Sửa tài khoản “'+esc(u.username)+'”')+'</h2><button class="btn sm" onclick="closeDrawer()">✕</button></div><div class="db"><div class="fg">'
    +'<div class="f"><label>Tên đăng nhập *</label><input id="uU" type="text" value="'+esc(u.username)+'" '+(isNew?'':'disabled')+' placeholder="vd: nguyenvana"></div><div class="f"><label>Họ tên hiển thị</label><input id="uN" type="text" value="'+esc(u.name)+'"></div>'
-   +'<div class="f"><label>Mẫu quyền (chọn rồi chỉnh chi tiết bên dưới)</label><select id="uR"><option value="admin">Quản trị (toàn quyền)</option><option value="editor">Cán bộ xử lý (xem + sửa)</option><option value="viewer">Chỉ xem</option></select></div>'
+   +'<div class="f"><label>Mẫu quyền (chọn rồi chỉnh chi tiết bên dưới)</label><select id="uR"><option value="admin">Quản trị (toàn quyền)</option><option value="manager">Quản lý đơn — thêm đơn mới, sửa, phân đơn</option><option value="updater">Cán bộ xử lý — chỉ cập nhật đơn được giao</option><option value="editor">Tuỳ chỉnh (tự chọn quyền bên dưới)</option><option value="viewer">Chỉ xem</option></select><div class="mut" id="uRh" style="margin-top:4px"></div></div>'
    +'<div class="f"><label>'+(isNew?'Mật khẩu * (từ 6 ký tự)':'Mật khẩu mới (để trống = giữ nguyên)')+'</label><input id="uP" type="password" autocomplete="new-password"></div></div>'
    +'<div id="uSh">'
    +'<div style="'+h4+'">1. Sổ được vào / được sửa</div><div style="'+gr+'" class="mut"><span></span><span>Xem</span><span>Sửa</span></div>'
@@ -1045,11 +1053,14 @@ function userForm(u){
    +'<div class="mut">“Đơn do mình tạo” tính từ lúc bật tính năng này: đơn tạo bằng app được ghi nhận người tạo; đơn có sẵn hoặc nhập trực tiếp trong Google Sheet chưa có người tạo (chỉ quản trị hoặc phạm vi khác mới sửa được).</div>'+'<datalist id="dlU">'+who.map(function(w){return '<option value="'+esc(w)+'">'}).join('')+'</datalist></div>'
    +'<label style="display:flex;gap:6px;align-items:center;margin-top:12px"><input type="checkbox" id="uA" '+(u.active?'checked':'')+'> Tài khoản đang hoạt động</label></div>'
    +'<div class="df"><button class="btn pri" id="uGo">'+(isNew?'Tạo tài khoản':'Lưu')+'</button><button class="btn" onclick="closeDrawer()">Huỷ</button></div>');
-  $('#uR').value=u.role;$('#uVs').value=P.vscope||'all';$('#uEs').value=P.escope||'all';
-  var PRE={editor:{dash:1,list:1,add:1,edit:1,export:1,phieu:1,log:0},viewer:{dash:1,list:1,add:0,edit:0,export:1,phieu:1,log:0}};
+  $('#uR').value=isNew?'updater':roleKind(u);$('#uVs').value=P.vscope||'all';$('#uEs').value=P.escope||'all';
+  var PRE={editor:{dash:1,list:1,add:1,edit:1,export:1,phieu:1,log:0},manager:{dash:1,list:1,add:1,edit:1,export:1,phieu:1,log:0},updater:{dash:1,list:1,add:0,edit:1,export:1,phieu:1,log:0},viewer:{dash:1,list:1,add:0,edit:0,export:1,phieu:1,log:0}};
+  var RH={admin:'Toàn quyền, kể cả cài đặt, tài khoản, cấu hình thống kê / bộ lọc.',manager:'Được thêm đơn mới, nhập & sửa mọi nội dung, phân đơn bằng cách chọn “Người xử lý đơn”.',updater:'Không thêm đơn mới. Chỉ cập nhật đơn có “Người xử lý đơn” là mình (điền tên người xử lý ở mục 4). Không sửa STT, Ngày nhận / Số đến, Người gửi đơn, Nguồn đơn và Người xử lý.',editor:'Tự chọn chức năng, cột và phạm vi ở các mục bên dưới.',viewer:'Chỉ xem, không thêm / sửa.'};
+  var hint=function(){$('#uRh').textContent=RH[$('#uR').value]||''};hint();
   var setPre=function(role){var p=PRE[role];if(!p)return;Object.keys(p).forEach(function(k){var c=$('[data-pk="'+k+'"]');if(c)c.checked=!!p[k]});
-    $$('[data-cv]').forEach(function(c){c.checked=true});$$('[data-ce]').forEach(function(c){c.checked=role==='editor'});$$('[data-es]').forEach(function(c){c.checked=role==='editor'&&$('[data-s="'+c.dataset.es+'"]').checked});$('#uVs').value='all';$('#uEs').value='all'};
-  var sync=function(){$('#uSh').classList.toggle('hid',$('#uR').value==='admin')};$('#uR').onchange=function(){setPre($('#uR').value);sync()};sync();
+    var wr=role==='editor'||role==='manager'||role==='updater';
+    $$('[data-cv]').forEach(function(c){c.checked=true});$$('[data-ce]').forEach(function(c){c.checked=wr&&!(role==='updater'&&UPD_LOCK.indexOf(c.dataset.ce)>=0)});$$('[data-es]').forEach(function(c){c.checked=wr&&$('[data-s="'+c.dataset.es+'"]').checked});$('#uVs').value='all';$('#uEs').value=role==='updater'?'handler':'all'};
+  var sync=function(){$('#uSh').classList.toggle('hid',$('#uR').value==='admin')};$('#uR').onchange=function(){setPre($('#uR').value);sync();hint()};sync();
   // sửa ⊂ xem
   $$('[data-ce]').forEach(function(c){c.onchange=function(){if(c.checked)$('[data-cv="'+c.dataset.ce+'"]').checked=true}});
   $$('[data-cv]').forEach(function(c){c.onchange=function(){if(!c.checked)$('[data-ce="'+c.dataset.cv+'"]').checked=false}});
@@ -1068,7 +1079,7 @@ function userForm(u){
     pm.vcols=vc;pm.ecols=ec;pm.esheets=es;pm.vscope=$('#uVs').value;pm.escope=$('#uEs').value;
     if($('#uR').value!=='admin'&&(pm.vscope==='handler'||(pm.edit&&(pm.escope==='handler'||pm.escope==='both')))&&!$('#uH').value.trim()){toast('Hãy nhập tên người xử lý của tài khoản (đúng như cột R) để dùng phạm vi “đơn do mình xử lý”','err',7000);return}
     if($('#uR').value!=='admin'&&pm.add&&!ec.some(function(x){return x==='C'||x==='E'})){toast('Đã cho “Thêm đơn mới” thì cần cho sửa ít nhất cột C hoặc E','err',6000);return}
-    var o={username:$('#uU').value,name:$('#uN').value,role:$('#uR').value,sheets:$('#uR').value==='admin'?'*':sel,perm:$('#uR').value==='admin'?null:pm,onlyOwn:pm.vscope==='handler',handler:$('#uH').value,active:$('#uA').checked,password:$('#uP').value};
+    var o={username:$('#uU').value,name:$('#uN').value,role:({manager:'editor',updater:'editor'})[$('#uR').value]||$('#uR').value,sheets:$('#uR').value==='admin'?'*':sel,perm:$('#uR').value==='admin'?null:pm,onlyOwn:pm.vscope==='handler',handler:$('#uH').value,active:$('#uA').checked,password:$('#uP').value};
     this.disabled=true;try{await run('saveUser',o,isNew);closeDrawer();toast('Đã lưu tài khoản','ok');renderUsers()}catch(e){toast(e.message,'err',7000);this.disabled=false}
   };
 }
