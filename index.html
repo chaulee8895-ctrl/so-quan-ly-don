@@ -5,7 +5,6 @@
 <meta charset="utf-8">
 <title>Sổ quản lý đơn</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{--grid:#c3cdd9;--gridh:#8fa3a0;--bg:#f3f5f9;--card:#fff;--ink:#1b2432;--mut:#667386;--line:#e3e8ef;--pri:#0f766e;--pri-soft:#e1f4f1;--red:#dc2626;--red-soft:#fde8e8;--amb:#b45309;--amb-soft:#fef3c7;--blue:#2563eb;--blue-soft:#e3ecfd;--vio:#7c3aed;--vio-soft:#efe7fd;--gr:#15803d;--gr-soft:#dcf5e4;--side:#0f1b2d;--shadow:0 1px 2px rgba(15,27,45,.06),0 4px 14px rgba(15,27,45,.05)}
 :root[data-theme=dark]{--grid:#34445f;--gridh:#4d6a69;--bg:#0b1220;--card:#121b2e;--ink:#e6ebf3;--mut:#93a0b4;--line:#22304a;--pri:#2dd4bf;--pri-soft:#10312f;--red:#f87171;--red-soft:#3a1c1c;--amb:#fbbf24;--amb-soft:#3a2e10;--blue:#60a5fa;--blue-soft:#16284a;--vio:#a78bfa;--vio-soft:#2a2150;--gr:#4ade80;--gr-soft:#133322;--side:#08101d;--shadow:none}
@@ -77,6 +76,7 @@ tr.rw{cursor:pointer}tr.rw:hover td{background:color-mix(in srgb,var(--pri) 6%,t
 .kv{display:grid;grid-template-columns:130px 1fr;gap:6px 12px;margin-bottom:12px}.kv dt{color:var(--mut);font-size:12.5px}.kv dd{margin:0;white-space:pre-wrap;word-break:break-word}
 .warn{background:var(--amb-soft);color:var(--amb);border-radius:9px;padding:8px 11px;font-size:13px;margin-bottom:10px}
 details{border:1px solid var(--line);border-radius:9px;padding:8px 11px;margin-bottom:10px}summary{cursor:pointer;font-weight:600;font-size:13px}
+#busy{position:fixed;top:0;left:0;right:0;height:3px;z-index:200;overflow:hidden;pointer-events:none;opacity:0;transition:opacity .2s}#busy.on{opacity:1}#busy::before{content:"";position:absolute;top:0;height:100%;width:30%;background:var(--pri);animation:bz 1.1s ease-in-out infinite}@keyframes bz{0%{left:-30%}100%{left:100%}}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:90;align-items:center}
 .tt{background:#1b2432;color:#fff;padding:9px 16px;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.3);font-size:13.5px;max-width:90vw}.tt.err{background:#b91c1c}.tt.ok{background:#0f766e}
 #modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(10,18,30,.5);z-index:80;padding:16px}
@@ -151,10 +151,23 @@ function noacc(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]
 var NOTOK={authStatus:1,firstAdmin:1,login:1,ownerReset:1,googleLogin:1};
 var EXEC_URL='https://script.google.com/macros/s/AKfycbyTxvn-xHB6KuMet6BnhAImJTBQl6gD1O6L2RQShA6Zei94-KFqOZdt0P87gDO7dZMG5A/exec';
 var LOCAL=!(window.google&&google.script&&google.script.run);
+var RETRY={authStatus:1,startup:1,getBootstrap:1,getSheetData:1,getSheetMeta:1,getPhieuHtml:1,listUsers:1,getLog:1,listTrash:1},BUSY=0,QUIET='';
+function busy(p,fn){if(QUIET&&QUIET===fn)return p;var b=document.getElementById('busy');if(!b){b=document.createElement('div');b.id='busy';document.body.appendChild(b)}BUSY++;b.classList.add('on');return p.finally(function(){BUSY--;if(BUSY<=0){BUSY=0;b.classList.remove('on')}})}
 function run(fn){var a=[].slice.call(arguments,1);if(!NOTOK[fn])a.unshift(S.token||'');
- function bad(e){var m=(e&&e.message)||String(e);if(/Phiên đăng nhập/.test(m)&&S.token){S.token='';ssSet('sd_tok','');showLogin()}return new Error(m)}
- if(LOCAL)return fetch(EXEC_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({fn:fn,args:a})}).then(function(r){return r.json()}).then(function(j){if(!j.ok)throw new Error(j.e);return j.r}).catch(function(e){throw bad(e)});
- return new Promise(function(ok,ko){google.script.run.withSuccessHandler(ok).withFailureHandler(function(e){ko(bad(e))})[fn].apply(null,a)})}
+ function bad(e){var m=(e&&e.message)||String(e);if(/Phiên đăng nhập/.test(m)&&S.token){S.token='';ssSet('sd_tok','');cacheClear();showLogin()}return new Error(m)}
+ function once(){
+  if(!LOCAL)return new Promise(function(ok,ko){google.script.run.withSuccessHandler(ok).withFailureHandler(function(e){var m=String((e&&e.message)||e),er=new Error(m);if(/network|failed to fetch|timed? ?out|mạng/i.test(m))er.net=1;ko(er)})[fn].apply(null,a)});
+  var ac=window.AbortController?new AbortController():null,tm=setTimeout(function(){if(ac)ac.abort()},fn==='getPhieuHtml'?150000:70000);
+  return fetch(EXEC_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({fn:fn,args:a}),signal:ac?ac.signal:undefined})
+   .then(function(r){return r.text()})
+   .then(function(tx){clearTimeout(tm);var j;try{j=JSON.parse(tx)}catch(e){var er=new Error('Máy chủ Google đang bận, vui lòng thử lại.');er.net=1;throw er}if(!j.ok)throw new Error(j.e);return j.r},
+     function(e){clearTimeout(tm);var er=new Error(e&&e.name==='AbortError'?'Máy chủ phản hồi quá lâu, vui lòng thử lại.':'Không kết nối được máy chủ (mạng chập chờn?), vui lòng thử lại.');er.net=1;throw er})}
+ var p=once().catch(function(e){if(e.net&&RETRY[fn])return new Promise(function(r){setTimeout(r,1500)}).then(once);throw e});
+ return busy(p,fn).catch(function(e){throw bad(e)})}
+function cacheGet(){try{var c=JSON.parse(sessionStorage.getItem('sd_cache')||'null');return c&&c.tok&&c.tok===S.token?c:null}catch(e){return null}}
+function cachePut(c){try{sessionStorage.setItem('sd_cache',JSON.stringify(c))}catch(e){cacheClear()}}
+function cacheClear(){try{sessionStorage.removeItem('sd_cache')}catch(e){}}
+var XLSX_P=null;function needXLSX(){if(window.XLSX)return Promise.resolve();if(!XLSX_P)XLSX_P=new Promise(function(ok,ko){var sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';sc.onload=ok;sc.onerror=function(){XLSX_P=null;ko(new Error('xlsx'))};document.head.appendChild(sc)});return XLSX_P}
 function ssGet(k){try{return sessionStorage.getItem(k)||''}catch(e){return ''}}
 function ssSet(k,v){try{sessionStorage.setItem(k,v)}catch(e){}}
 function toast(m,t,ms){var d=document.createElement('div');d.className='tt '+(t||'');d.textContent=m;$('#toast').appendChild(d);setTimeout(function(){d.remove()},ms||3200)}
@@ -232,9 +245,12 @@ document.addEventListener('keydown',function(e){
 
 /* ============ KHỞI ĐỘNG & TẢI DỮ LIỆU ============ */
 async function boot(){
-  try{S.st=await run('authStatus')}catch(e){toast(e.message,'err',6000);return}
-  var t=ssGet('sd_tok');
-  if(t){S.token=t;try{await afterLogin();return}catch(e){S.token='';ssSet('sd_tok','')}}
+  var t=ssGet('sd_tok'),c=null;
+  if(t){S.token=t;c=cacheGet();if(c){try{applyBundle(c,true)}catch(e){c=null}}if(!c)$('#v-dash').innerHTML='<div class="empty"><span class="spin"></span> Đang tải dữ liệu sổ…</div>'}
+  var r;try{r=await run('startup',lsGet('sd_sheet',''))}catch(e){toast(c?'Chưa cập nhật được dữ liệu mới ('+e.message+') — đang hiện dữ liệu tải lúc trước.':e.message,'err',8000);if(!c&&!t)showLogin();return}
+  S.st=r.st;
+  if(r.boot){applyBundle(r);return}
+  S.token='';ssSet('sd_tok','');cacheClear();S.boot=null;S.rows=[];
   showLogin();
   if(S.st&&S.st.owner&&!ssGet('sd_noauto')&&$('#lG'))$('#lG').click();
 }
@@ -256,15 +272,21 @@ function applyRole(){
   var p=PM();$$('.nav[data-v]').forEach(function(b){var v=b.dataset.v;if(v==='dash'||v==='list'||v==='phieu')b.classList.toggle('hid',!isAdm()&&!p[v])});
 }
 async function afterLogin(){
-  S.boot=await run('getBootstrap');
+  var r=await run('startup',lsGet('sd_sheet',''));
+  if(!r.boot)throw new Error('Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại.');
+  S.st=r.st;applyBundle(r);
+}
+function applyBundle(r,fromCache){
+  S.boot=r.boot;
   $('#login').style.display='none';applyRole();
   var sel=$('#selSheet');sel.innerHTML=S.boot.sheets.map(function(s){return '<option>'+esc(s.name)+'</option>'}).join('');
-  var want=lsGet('sd_sheet','');
-  S.sheet=S.boot.sheets.some(function(s){return s.name===want})?want:(S.boot.sheets.some(function(s){return s.name===S.boot.defaultSheet})?S.boot.defaultSheet:((S.boot.sheets[0]&&S.boot.sheets[0].name)||''));
-  sel.value=S.sheet;
+  S.sheet=r.sheet||'';sel.value=S.sheet;
   if(!isAdm()){var pp=PM();if(S.view==='dash'&&!pp.dash)S.view=pp.list?'list':(pp.phieu?'phieu':'set')}
-  if(!S.boot.ssId||!S.sheet){show(isAdm()?'set':'dash');if(!isAdm())$('#v-dash').innerHTML='<div class="empty">Tài khoản chưa được cấp quyền vào sổ nào. Liên hệ quản trị viên.</div>';return}
-  await loadData(false);
+  if(!S.boot.ssId||!S.sheet){S.rows=[];show(isAdm()?'set':'dash');if(!isAdm())$('#v-dash').innerHTML='<div class="empty">Tài khoản chưa được cấp quyền vào sổ nào. Liên hệ quản trị viên.</div>';if(!fromCache)cacheClear();return}
+  if(r.data){S.rows=r.data.rows.map(normRow);S.meta=r.data.meta||null}else{S.rows=[];S.meta=null;if(r.dataErr)toast(r.dataErr,'err',6000)}
+  S.loading=false;show(S.view);
+  if(fromCache)toast('Đang cập nhật dữ liệu mới nhất…','',2500);
+  else{cachePut({tok:S.token,boot:r.boot,sheet:r.sheet,data:r.data||null,st:r.st,t:Date.now()});warmPhieu()}
 }
 function showLogin(){
   var st=S.st||{},L=$('#login');L.style.display='grid';
@@ -290,7 +312,7 @@ async function doLogin(u,p){
   var r=u===null?await run('googleLogin'):await run('login',u,p);S.token=r.token;ssSet('sd_tok',r.token);ssSet('sd_noauto','');
   S.rows=[];S.meta=null;await afterLogin();
 }
-async function doLogout(){try{await run('logout')}catch(e){}S.token='';ssSet('sd_tok','');ssSet('sd_noauto','1');S.rows=[];S.boot=null;closeDrawer();showLogin()}
+async function doLogout(){try{await run('logout')}catch(e){}cacheClear();S.token='';ssSet('sd_tok','');ssSet('sd_noauto','1');S.rows=[];S.boot=null;closeDrawer();showLogin()}
 async function changePw(){
   var ok=await modal('<h3 style="margin:0 0 8px">Đổi mật khẩu</h3><div class="f"><label>Mật khẩu hiện tại</label><input id="p0" type="password"></div><div class="f"><label>Mật khẩu mới (từ 6 ký tự)</label><input id="p1" type="password"></div><div class="f"><label>Nhập lại mật khẩu mới</label><input id="p2" type="password"></div>',[{t:'Huỷ',v:false},{t:'Đổi mật khẩu',v:true,c:'pri'}]);
   if(!ok)return;if($('#p1').value!==$('#p2').value){toast('Hai mật khẩu mới không khớp','err');return}
@@ -302,6 +324,7 @@ async function loadData(force){
   try{
     var d=await run('getSheetData',S.sheet);
     S.rows=d.rows.map(normRow);S.meta=d.meta||null;S.loading=false;
+    var cc=cacheGet();if(cc){cc.sheet=S.sheet;cc.data=d;cc.t=Date.now();cachePut(cc)}
     if(force)toast('Đã tải '+S.rows.length+' đơn','ok');
     show(S.view);
   }catch(e){S.loading=false;toast(e.message,'err',6000);$('#v-dash').innerHTML='<div class="empty">Không tải được dữ liệu: '+esc(e.message)+'</div>'}
@@ -479,8 +502,8 @@ async function addBannerUi(){
   if(!ok)return;var t=$('#bnT').value.trim();if(!t)return;
   try{await run('addBanner',S.sheet,t);toast('Đã thêm dòng tháng','ok');await loadData(false)}catch(e){toast(e.message,'err',6000)}
 }
-function exportReport(rows){
-  if(!window.XLSX){toast('Chưa tải được thư viện Excel (cần mạng).','err');return}
+async function exportReport(rows){
+  try{await needXLSX()}catch(e){toast('Chưa tải được thư viện Excel (cần mạng).','err');return}
   var wb=XLSX.utils.book_new(),tbl=function(c,h){return c.map(function(x){var o={};o[h]=x[0];o['Số đơn']=x[1];o['Tỷ lệ %']=rows.length?Math.round(x[1]*1000/rows.length)/10:0;return o})};
   var sum=[['Sổ',S.sheet],['Tổng số đơn',rows.length],['Đã xử lý',rows.filter(function(r){return r.done}).length],['Chưa xử lý',rows.filter(function(r){return !r.done}).length],['Có văn bản trả lời',rows.filter(function(r){return String(r.S).trim()}).length],['Kỳ báo cáo',S.period==='custom'?(dmy(S.pf)+' - '+dmy(S.pt)):S.period],['Ngày xuất',dmy(todayISO())]];
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sum),'Tổng hợp');
@@ -593,11 +616,20 @@ function guessDx(name){var n=noacc(name);return /\bthi\b/.test(n)&&!/ (van|duc|m
 function phieuPrefill(r){
   return {danhxung:guessDx(r.name),hoten:r.name,diachi:r.addr,ngaynhan:r.date,donghingay:r.date,noidung:r.E}
 }
-async function ensurePhieu(){
-  if(PH.url||PH.loading)return;
+function ensurePhieu(){if(PH.url)return Promise.resolve();if(!PH.p)PH.p=ensurePhieu0().then(function(){PH.p=null});return PH.p}
+var PCK='sqld-phieu';
+function phKey(){var p=S.boot&&S.boot.phieu;return p?location.origin+'/__phieu_cache__?v='+p.updated+'_'+p.size:''}
+async function phieuSrc(){
+  var k=phKey(),c=null;
+  if(k&&window.caches){try{c=await caches.open(PCK);var m=await c.match(k);if(m)return await m.text()}catch(e){c=null}}
+  var html=await run('getPhieuHtml');
+  if(c&&k){try{var ks=await c.keys();for(var i=0;i<ks.length;i++)await c.delete(ks[i]);await c.put(k,new Response(html,{headers:{'Content-Type':'text/html; charset=utf-8'}}))}catch(e){}}
+  return html}
+function warmPhieu(){if(!(S.boot&&S.boot.phieu)||!(isAdm()||PM().phieu))return;setTimeout(function(){if(PH.url||PH.p)return;QUIET='getPhieuHtml';ensurePhieu().then(function(){QUIET=''})},5000)}
+async function ensurePhieu0(){
   PH.loading=true;
   try{
-    var html=await run('getPhieuHtml');
+    var html=await phieuSrc();
     var head='<script>try{if(!'+LOCAL+'&&window.top!==window.self)window.showDirectoryPicker=undefined;}catch(e){}try{window.localStorage.getItem("t")}catch(e){var _m={};Object.defineProperty(window,"localStorage",{value:{getItem:function(k){return k in _m?_m[k]:null},setItem:function(k,v){_m[k]=String(v)},removeItem:function(k){delete _m[k]},clear:function(){_m={}}}})}'+'<'+'/script>';
     var boot='<script>(function(){var P=(window.opener&&window.opener!==window)?window.opener:parent,solo=(window.top===window.self)||'+LOCAL+';function sv(id,v){var e=document.getElementById(id);if(!e)return;e.value=v==null?"":v;["input","change"].forEach(function(t){e.dispatchEvent(new Event(t,{bubbles:true}))})}'
      +'window.addEventListener("message",function(ev){var d=ev.data||{};if(d.type==="gqd-prefill"&&d.data){var x=d.data;sv("danhxung",x.danhxung);sv("hoten",x.hoten);sv("diachi",x.diachi);sv("ngaynhan",x.ngaynhan);sv("donghingay",x.donghingay);sv("noidung",x.noidung);}});'
