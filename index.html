@@ -86,7 +86,7 @@ details{border:1px solid var(--line);border-radius:9px;padding:8px 11px;margin-b
 .empty{padding:40px;text-align:center;color:var(--mut)}
 .spin{display:inline-block;width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--pri);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-3px}@keyframes sp{to{transform:rotate(360deg)}}
 @media(max-width:860px){#app{grid-template-columns:1fr}#side{position:fixed;z-index:50;left:0;top:0;bottom:0;width:230px;transform:translateX(-105%);transition:.2s}#side.on{transform:none}#burger{display:inline-block}.view{padding:12px}.fg{grid-template-columns:1fr}.kv{grid-template-columns:100px 1fr}}
-.xl{min-width:2000px;font-size:12.5px;border-collapse:separate;border-spacing:0}
+.xl{table-layout:fixed;font-size:12.5px;border-collapse:separate;border-spacing:0}
 .xl th,.xl td{border-right:1px solid var(--grid);border-bottom:1px solid var(--grid);padding:4px 6px;white-space:pre-wrap;word-break:break-word;vertical-align:top;line-height:1.35}
 .xl thead{position:sticky;top:0;z-index:3}
 .xl th{position:static;text-transform:none;letter-spacing:0;text-align:center;vertical-align:middle;font-weight:700;color:var(--txt,inherit);background:color-mix(in srgb,var(--pri) 14%,var(--card));background-clip:padding-box}
@@ -432,15 +432,15 @@ function colGroups(m){ // nhóm cột suy từ dòng 3-4: cột có dòng 3 và 
   return gid}
 function xlTable(cur){
   var m=S.meta||DEF_META,vis=[];for(var i=0;i<19;i++)if(cv(LET19[i])&&(i<5||!(m.hidden&&m.hidden[i])))vis.push(i);
-  var gid=colGroups(m),ar=function(k){return S.sort.k===k?(S.sort.d>0?' ▲':' ▼'):''},W=function(i){return Math.max(40,Math.min(420,(m.widths&&m.widths[i])||80))};
+  var gid=colGroups(m),ar=function(k){return S.sort.k===k?(S.sort.d>0?' ▲':' ▼'):''},W=function(i){return Math.max(30,Math.min(500,(m.widths&&m.widths[i])||80))};
   var h1='<tr>',h2='<tr>',h3='<tr class="n">',seen={},hasNum=false;
   vis.forEach(function(i){if(String(m.h5&&m.h5[i]||'').trim())hasNum=true;
     var g=gid[i];
-    if(g>=0){h2+='<th style="min-width:'+W(i)+'px">'+esc(m.h4[i])+'</th>';
+    if(g>=0){h2+='<th>'+esc(m.h4[i])+'</th>';
       if(!seen[g]){seen[g]=1;var n=vis.filter(function(x){return gid[x]===g}).length;h1+='<th colspan="'+n+'">'+esc(m.h3[g])+'</th>'}
       return}
     var k=SORTK[i],t=String(m.h3[i]||'').trim()?m.h3[i]:m.h4[i];
-    h1+='<th rowspan="2" style="min-width:'+W(i)+'px"'+(k?' data-s="'+k+'"':'')+'>'+esc(t)+(k?ar(k):'')+'</th>';
+    h1+='<th rowspan="2"'+(k?' data-s="'+k+'"':'')+'>'+esc(t)+(k?ar(k):'')+'</th>';
   });
   h1+='</tr>';h2+='</tr>';vis.forEach(function(i){h3+='<th>'+esc(String(m.h5&&m.h5[i]||'').replace(/^(\d+)[.,]0+$/,'$1'))+'</th>'});h3+='</tr>';
   var body='',last=null,byRow=(S.sort.k==='row'||S.sort.k==='soden'),LET='ABCDEFGHIJKLMNOPQRS'.split('');
@@ -456,7 +456,8 @@ function xlTable(cur){
     body+=t+'</tr>';
   });
   if(!cur.length)body='<tr><td colspan="'+vis.length+'" class="empty">Không có đơn phù hợp</td></tr>';
-  return '<div class="tw"><table class="xl"><thead>'+h1+h2+(hasNum?h3:'')+'</thead><tbody>'+body+'</tbody></table></div>';
+  var cols=vis.map(function(i){return '<col data-c="'+LET19[i]+'" style="width:'+W(i)+'px">'}).join(''),tw=vis.reduce(function(a,i){return a+W(i)},0);
+  return '<div class="tw"><table class="xl" style="width:'+tw+'px"><colgroup>'+cols+'</colgroup><thead>'+h1+h2+(hasNum?h3:'')+'</thead><tbody>'+body+'</tbody></table></div>';
 }
 function renderList(){
   var el=$('#v-list');
@@ -874,6 +875,7 @@ function editTableForm(){
   function refSel(){$$('[data-g]').forEach(function(s){var v=+s.value;s.innerHTML=sfGroupOpts(names,v>=names.length?-1:v)})}
   drawGr();
   $('#sGadd').onclick=function(){names.push('Nhóm '+(names.length+1));drawGr();refSel()};
+  $$('[data-w]').forEach(function(c){c.oninput=function(){var v=+c.value,t=document.querySelector('table.xl'),col=t&&t.querySelector('col[data-c="'+c.dataset.w+'"]');if(!col||!(v>=30&&v<=500))return;col.style.width=v+'px';var sum=0;t.querySelectorAll('col').forEach(function(x){sum+=parseFloat(x.style.width)||0});t.style.width=sum+'px'}});
   $('#sGo').onclick=async function(){
     var o={title:$('#sT').value,numRow:$('#sNum').checked,keep:[],headers:{},widths:{},groups:[]};
     $$('[data-k]').forEach(function(c){if(c.checked&&c.dataset.k>='F')o.keep.push(c.dataset.k)});
