@@ -391,7 +391,7 @@ function filtered(){
   });
   var k=S.sort.k,d=S.sort.d;
   rows.sort(function(a,b){var x,y;
-    if(k==='soden'){var ma=a.date?a.date.slice(0,7):'',mb=b.date?b.date.slice(0,7):'';if(ma!==mb)return ma<mb?-d:d;x=a.soden?parseInt(a.soden,10):-1;y=b.soden?parseInt(b.soden,10):-1}else if(k==='date'){x=a.date||'';y=b.date||''}else if(k==='name'){x=noacc(a.name);y=noacc(b.name)}else if(k==='who'){x=noacc(a.who);y=noacc(b.who)}else if(k==='huong'){x=a.huong;y=b.huong}else{x=a.row;y=b.row}
+    if(k==='soden'){var ma=a.date?a.date.slice(0,7):'',mb=b.date?b.date.slice(0,7):'';if(ma!==mb)return ma<mb?-d:d;x=a.stt||0;y=b.stt||0}else if(k==='date'){x=a.date||'';y=b.date||''}else if(k==='name'){x=noacc(a.name);y=noacc(b.name)}else if(k==='who'){x=noacc(a.who);y=noacc(b.who)}else if(k==='huong'){x=a.huong;y=b.huong}else{x=a.row;y=b.row}
     return x<y?-d:x>y?d:(a.row-b.row)*d});
   return rows;
 }
@@ -446,7 +446,8 @@ function renderList(){
   var cur=rows.slice((S.page-1)*S.per,S.page*S.per);
   var th=function(k,t){return '<th data-s="'+k+'">'+t+(S.sort.k===k?(S.sort.d>0?' ▲':' ▼'):'')+'</th>'};
   var nf=['month','who','src','dv','huong','tt','from','to'].filter(function(k){return f[k]}).length;
-  $('#topActs').innerHTML='<span class="seg"><button id="mX" class="'+(S.mode==='xl'?'on':'')+'">▦ Bảng Excel</button><button id="mC" class="'+(S.mode==='xl'?'':'on')+'">☰ Thẻ gọn</button></span><button class="btn sm" id="btnF" title="Hiện / ẩn hàng bộ lọc">⚲ Bộ lọc'+(nf?' <b>('+nf+')</b>':'')+'</button><button class="btn sm" id="btnX" title="Xuất file Excel đúng bố cục của sổ">⬇ Xuất Excel</button><button class="btn sm wr" id="btnB" title="Thêm dòng tiêu đề tháng vào cuối sổ">＋ Dòng tháng</button><button class="btn pri sm wr" id="btnN">＋ Thêm đơn</button>';
+  $('#topActs').innerHTML='<span class="seg"><button id="mX" class="'+(S.mode==='xl'?'on':'')+'">▦ Bảng Excel</button><button id="mC" class="'+(S.mode==='xl'?'':'on')+'">☰ Thẻ gọn</button></span><button class="btn sm" id="btnF" title="Hiện / ẩn hàng bộ lọc">⚲ Bộ lọc'+(nf?' <b>('+nf+')</b>':'')+'</button><button class="btn sm" id="btnX" title="Xuất file Excel đúng bố cục của sổ">⬇ Xuất Excel</button><button class="btn sm hid" id="btnEd" title="Sửa tiêu đề, thêm/bớt cột của bảng">⚙ Sửa bảng</button><button class="btn sm wr" id="btnB" title="Thêm dòng tiêu đề tháng vào cuối sổ">＋ Dòng tháng</button><button class="btn pri sm wr" id="btnN">＋ Thêm đơn</button>';
+  if(isAdm()){$('#btnEd').classList.remove('hid');$('#btnEd').onclick=editTableForm}
   $$('.wr',$('#topActs')).forEach(function(e){e.classList.toggle('hid',!canWr())});if(!PM().export)$('#btnX').classList.add('hid');
   el.innerHTML=(S.fOpen?'<div class="bar">'+opt('month',months,f.month,'Tất cả tháng')+opt('who',whos,f.who,'Người xử lý')+opt('src',srcs,f.src,'Nguồn đơn')+opt('dv',dvs,f.dv,'Phòng / đơn vị xử lý')+opt('huong',HUONG_LIST,f.huong,'Hướng xử lý')+opt('tt',[['chua','Chưa xử lý'],['da','Đã xử lý']],f.tt,'Trạng thái')
    +'<input type="date" data-f="from" value="'+esc(f.from)+'" style="width:auto" title="Từ ngày"><input type="date" data-f="to" value="'+esc(f.to)+'" style="width:auto" title="Đến ngày"><button class="btn sm" id="btnClr">Xoá lọc</button></div>':'')
@@ -510,6 +511,7 @@ function openRow(n){
   $('#dSame').onclick=function(){closeDrawer();S.f.q=r.name;$('#gq').value=r.name;show('list');renderList()};
 }
 function nextStt(){var mx=0;S.rows.slice(-40).forEach(function(r){if(r.stt>mx)mx=r.stt});return mx+1}
+function nextSoden(){var mx=0;S.rows.forEach(function(r){var n=r.soden?parseInt(r.soden,10):0;if(n>mx)mx=n});return mx?String(mx+1):''}
 function dl(id,vals){return '<datalist id="'+id+'">'+vals.map(function(v){return '<option value="'+esc(v)+'">'}).join('')+'</datalist>'}
 function openForm(n,pre){
   if(n?!canEdit():!canAdd()){toast(n?'Bạn không có quyền sửa đơn trong sổ này':'Bạn không có quyền thêm đơn trong sổ này','err');return}
@@ -600,7 +602,7 @@ async function ensurePhieu(){
     var boot='<script>(function(){var P=(window.opener&&window.opener!==window)?window.opener:parent,solo=(window.top===window.self)||'+LOCAL+';function sv(id,v){var e=document.getElementById(id);if(!e)return;e.value=v==null?"":v;["input","change"].forEach(function(t){e.dispatchEvent(new Event(t,{bubbles:true}))})}'
      +'window.addEventListener("message",function(ev){var d=ev.data||{};if(d.type==="gqd-prefill"&&d.data){var x=d.data;sv("danhxung",x.danhxung);sv("hoten",x.hoten);sv("diachi",x.diachi);sv("ngaynhan",x.ngaynhan);sv("donghingay",x.donghingay);sv("noidung",x.noidung);}});'
      +'var b=document.createElement("button");b.textContent="↩ Ghi số phiếu vào sổ";b.style.cssText="position:fixed;right:14px;bottom:14px;z-index:9999;background:#0f766e;color:#fff;border:0;border-radius:10px;padding:10px 14px;font:600 13px Segoe UI,sans-serif;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.3)";'
-     +'b.onclick=function(){var g=function(i){var e=document.getElementById(i);return e?e.value:""},c=function(i){var e=document.getElementById(i);return !!(e&&e.checked)};P.postMessage({type:"gqd-done",sodx:g("sodx"),ngay:g("ngaydx"),pc:c("chkPC"),tb:c("chkTB"),lu:c("chkLU"),cq:g("cqnhan"),dx:g("danhxung"),hoten:g("hoten"),diachi:g("diachi"),ngaynhan:g("ngaynhan"),donghingay:g("donghingay"),noidung:g("noidung")},"*")};'
+     +'b.onclick=function(){var g=function(i){var e=document.getElementById(i);return e?e.value:""},c=function(i){var e=document.getElementById(i);return !!(e&&e.checked)};P.postMessage({type:"gqd-done",sodx:g("sodx"),ngay:g("ngaydx"),pc:c("chkPC"),tb:c("chkTB"),lu:c("chkLU"),cq:g("cqnhan"),lnn:g("loainoinhan"),dx:g("danhxung"),hoten:g("hoten"),diachi:g("diachi"),ngaynhan:g("ngaynhan"),donghingay:g("donghingay"),noidung:g("noidung")},"*")};'
      +'if(!solo){(function(){var f=document.getElementById("pvPdf");if(!f||f.tagName!=="IFRAME")return;'
      +'var box=document.createElement("div");box.id="pvPdf";box.className=f.className;box.style.cssText="display:none;overflow:auto;background:#525659";'
      +'f.parentNode.replaceChild(box,f);'
@@ -685,6 +687,15 @@ window.addEventListener('message',async function(ev){
     var loai=[d.pc?'chuyển đơn'+(d.cq?' đến '+d.cq:''):'',d.tb?'trả lại đơn, hướng dẫn':'',d.lu?'lưu đơn':''].filter(Boolean).join('; ');
     var q=d.lu?'XL':(d.tb?'TBCD':(d.pc?(d.cq||''):''));
     var pre={name:String(d.hoten||'').trim(),addr:String(d.diachi||'').trim(),date:d.ngaynhan||d.donghingay||todayISO(),E:String(d.noidung||'').trim(),S:'Phiếu số '+(d.sodx||'…')+' ngày '+ng+(loai?': '+loai:''),Q:q};
+    var sp=String(d.sodx||'').trim();if(sp)pre.A=sp;var ns=nextSoden();if(ns)pre.soden=ns;
+    if(d.pc&&d.cq){var cq=String(d.cq).trim(),pn=cq.match(/Phòng\s*(\d+)/i),kv=cq.match(/khu vực\s*(\d+)/i);
+      if(d.lnn==='phong'){pre.J=pn?'Phòng '+pn[1]:cq}
+      else if(/cảnh sát điều tra|cơ quan điều tra|CQĐT/i.test(cq))pre.K=/cảnh sát điều tra/i.test(cq)&&/hải phòng|HP/i.test(cq)?'CQĐT CATP HP':cq;
+      else if(/viện kiểm sát|VKS/i.test(cq))pre.L=kv?'VKS KV '+kv[1]:cq.replace(/Viện kiểm sát nhân dân/gi,'VKSND');
+      else if(/tòa án|TAND/i.test(cq))pre.M=kv?'TA KV '+kv[1]:(/thành phố hải phòng|TP\.? ?HP/i.test(cq)?'TATP HP':cq.replace(/Tòa án nhân dân/gi,'TAND'));
+      else pre.N=cq}
+    if(d.lu)pre.O='XL';
+    if(d.tb)pre.P='TBCD';
     if(S.view==='phieu')show('list');
     openForm(null,pre);toast('Đã chuyển sang Thêm đơn mới — kiểm tra rồi bấm “Thêm vào sổ”','ok');
     try{window.focus()}catch(e){}
@@ -813,6 +824,35 @@ function sheetForm(from){
     this.disabled=true;this.textContent='Đang tạo…';
     try{await run('createSheet',o);S.sheet=name;lsSet('sd_sheet',name);await refreshBoot();closeDrawer();toast('Đã tạo sổ “'+name+'”','ok');await loadData(false);show('list')}
     catch(e){toast(e.message,'err',8000);this.disabled=false;this.textContent='Tạo sổ'}
+  };
+}
+
+function editTableForm(){
+  var m=S.meta||DEF_META,st=sfCols(m);
+  openDrawer('<div class="dh"><h2>Sửa bảng “'+esc(S.sheet)+'”</h2><button class="btn sm" onclick="closeDrawer()">✕</button></div><div class="db">'
+   +'<div class="f" style="margin-bottom:10px"><label>Tiêu đề sổ (dòng 1)</label><input id="sT" type="text" value="'+esc(m.title||'')+'"></div>'
+   +'<div style="font-weight:600;margin:12px 0 4px">Nhóm cột (dòng tiêu đề trên, gộp nhiều cột)</div><div id="sGr"></div><button class="btn sm" id="sGadd" style="margin-top:6px">＋ Thêm nhóm</button>'
+   +'<div style="font-weight:600;margin:14px 0 4px">Cột &amp; tiêu đề</div><div class="mut" style="margin-bottom:6px">Tick để thêm (hiện) hoặc bớt (ẩn) cột, sửa tên tiêu đề, độ rộng (px) và nhóm. Cột A–E luôn hiện. Dữ liệu của cột bị ẩn vẫn được giữ trong Google Sheet.</div><div class="cols" id="sCols">'+sfColsHtml(m,st)+'</div>'
+   +'<label style="display:flex;gap:6px;align-items:center;margin-top:10px"><input type="checkbox" id="sNum" '+(String(m.h5&&m.h5[0]||'').trim()?'checked':'')+'> Hiện dòng đánh số cột (1, 2, 3…) dưới tiêu đề</label></div>'
+   +'<div class="df"><button class="btn pri" id="sGo">Lưu thay đổi</button><button class="btn" onclick="closeDrawer()">Huỷ</button></div>');
+  var names=st.names.slice();
+  function drawGr(){$('#sGr').innerHTML=names.map(function(n,k){return '<div style="display:flex;gap:6px;margin-bottom:5px"><input type="text" data-gn="'+k+'" value="'+esc(n)+'" placeholder="Tên nhóm '+(k+1)+'" style="flex:1"><button class="btn sm" data-gd="'+k+'" title="Bỏ nhóm này">✕</button></div>'}).join('')||'<div class="mut">Chưa có nhóm.</div>';
+    $$('[data-gn]').forEach(function(e){e.oninput=function(){names[+e.dataset.gn]=e.value;refSel()}});
+    $$('[data-gd]').forEach(function(e){e.onclick=function(){var k=+e.dataset.gd;names.splice(k,1);$$('[data-g]').forEach(function(s){var v=+s.value;s.value=v===k?-1:(v>k?v-1:v);});drawGr();refSel()}})}
+  function refSel(){$$('[data-g]').forEach(function(s){var v=+s.value;s.innerHTML=sfGroupOpts(names,v>=names.length?-1:v)})}
+  drawGr();
+  $('#sGadd').onclick=function(){names.push('Nhóm '+(names.length+1));drawGr();refSel()};
+  $('#sGo').onclick=async function(){
+    var o={title:$('#sT').value,numRow:$('#sNum').checked,keep:[],headers:{},widths:{},groups:[]};
+    $$('[data-k]').forEach(function(c){if(c.checked&&c.dataset.k>='F')o.keep.push(c.dataset.k)});
+    $$('[data-h]').forEach(function(c){var v=c.value.trim();if(v)o.headers[c.dataset.h]=v});
+    $$('[data-w]').forEach(function(c){var v=+c.value;if(v>=30)o.widths[c.dataset.w]=v});
+    var cur=null;LET19.forEach(function(L,i){if(i<6||i>16)return;var sel=$('[data-g="'+L+'"]');var v=sel?+sel.value:-1;
+      if(v>=0){if(cur&&cur.k===v&&cur.to===i-1){cur.to=i}else{cur={k:v,name:(names[v]||'').trim()||('Nhóm '+(v+1)),from:i,to:i};o.groups.push(cur)}}else cur=null});
+    o.groups=o.groups.map(function(g){return {name:g.name,from:LET19[g.from],to:LET19[g.to]}});
+    this.disabled=true;this.textContent='Đang lưu…';
+    try{await run('updateSheetMeta',S.sheet,o);closeDrawer();toast('Đã cập nhật bảng','ok');await loadData(false)}
+    catch(e){toast(e.message,'err',8000);this.disabled=false;this.textContent='Lưu thay đổi'}
   };
 }
 
