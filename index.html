@@ -272,6 +272,7 @@ function shOK(){var p=PM();return !p.esheets||p.esheets==='*'||p.esheets.indexOf
 function canAdd(){return !!PM().add&&shOK()}
 function canEdit(){return !!PM().edit&&shOK()}
 function canWr(){return canAdd()}
+function canDel(){var p=PM();return isAdm()||(!!p.add&&(p.escope||'all')==='all'&&shOK())}
 function applyRole(){
   var u=S.boot.user;
   $('#who').innerHTML='<b>'+esc(u.name)+'</b><span class="rolebadge">'+esc(roleName(u))+'</span><div class="mut">'+esc(u.username)+'</div><div class="lk"><a id="aPw">Đổi mật khẩu</a><a id="aOut">Đăng xuất</a></div>';
@@ -670,15 +671,23 @@ function openRow(n){
   openDrawer('<div class="dh"><h2>'+esc(r.name||'(không tên)')+'<div class="mut" style="font-weight:400">Dòng '+r.row+' · STT '+esc(String(r.A).replace(/\n/g,' '))+(r.ban?' · '+esc(r.ban):'')+'</div></h2><button class="btn sm" onclick="closeDrawer()">✕</button></div>'
    +'<div class="db"><div class="chips" style="margin-bottom:12px"><span class="badge '+HUONG_CLS[r.huong]+'">'+esc(r.huong)+'</span><span class="badge '+(r.done?'b-gr':'b-rd')+'">'+(r.done?'Đã xử lý':'Chưa xử lý')+'</span>'+(r.date?'<span class="badge b-mu">'+daysFrom(r.date)+' ngày kể từ khi nhận</span>':'')+'</div>'
    +'<dl class="kv">'+kv('Ngày nhận',dmy(r.date)||String(r.B).replace(/\n/g,' '))+kv('Số đến',r.soden)+kv('Địa chỉ',r.addr)+kv('Nguồn đơn / LĐV',r.src)+kv('Loại việc',r.loai)+kv('Nội dung đơn',r.E)+kv('Phòng nghiệp vụ',r.J)+kv('CQĐT',r.K)+kv('VKS / Tòa án',[r.L,r.M].filter(Boolean).join(' • '))+kv('Khác',r.N)+kv('Xếp lưu',r.O)+kv('TBCD',r.P)+kv('Chuyển CQ có TQ / XL / TBCD',r.Q)+kv('Người xử lý',r.who)+kv('VB trả lời đơn',r.S)+'</dl>'+asgHtml(r)+'</div>'
-   +'<div class="df">'+(PM().phieu?'<button class="btn pri" id="dPhieu">📝 Tạo phiếu giải quyết</button>':'')+(canEdit()&&r.ed!==0?'<button class="btn" id="dEdit">✎ Sửa</button>':'')+'<button class="btn" id="dCopy">⧉ Sao chép nội dung</button><button class="btn" id="dSame">Đơn cùng người gửi</button></div>');
+   +'<div class="df">'+(PM().phieu?'<button class="btn pri" id="dPhieu">📝 Tạo phiếu giải quyết</button>':'')+(canEdit()&&r.ed!==0?'<button class="btn" id="dEdit">✎ Sửa</button>':'')+(canDel()?'<button class="btn" id="dDel" style="color:#dc2626;margin-left:auto">🗑 Xoá đơn</button>':'')+'<button class="btn" id="dCopy">⧉ Sao chép nội dung</button><button class="btn" id="dSame">Đơn cùng người gửi</button></div>');
   if($('#dPhieu'))$('#dPhieu').onclick=function(){closeDrawer();S.ctx=r.row;show('phieu')};
   if($('#dAsgGo'))$('#dAsgGo').onclick=async function(){var v=$('#dAsg').value.trim();if(v===String(r.R||'').trim()){toast('Chưa đổi người xử lý');return}this.disabled=true;this.textContent='Đang giao…';try{await run('saveRecord',S.sheet,r.row,{R:v,_sig:r.C});toast(v?'Đã giao đơn cho '+v:'Đã bỏ người xử lý','ok');closeDrawer();patchLocal(r,{R:v});loadData(false)}catch(e){toast(e.message,'err',7000);this.disabled=false;this.textContent='Giao'}};
   if($('#dEdit'))$('#dEdit').onclick=function(){openForm(r.row)};
+  if($('#dDel'))$('#dDel').onclick=async function(){
+    var ok=await modal('<h3 style="margin:0 0 8px;color:#dc2626">Xoá đơn khỏi sổ?</h3><div>Đơn <b>STT '+esc(String(r.A).split('\n')[0])+'</b> — <b>'+esc(r.name||'(không tên)')+'</b> (dòng '+r.row+' trong sổ “'+esc(S.sheet)+'”) sẽ bị xoá khỏi sổ đơn.</div><div class="mut" style="margin-top:8px">Bản sao của đơn được lưu vào trang ẩn “ĐƠN ĐÃ XOÁ (app)” trong Google Sheet để có thể khôi phục khi cần. Các dòng phía dưới sẽ dồn lên 1 dòng.</div><div class="f" style="margin-top:10px"><label>Gõ <b>XOA</b> để xác nhận</label><input id="delCf" type="text" autocomplete="off"></div>',[{t:'Huỷ',v:false},{t:'Xoá đơn',v:true,c:'red'}]);
+    if(!ok)return;if(String(($('#delCf')||{}).value||'').trim().toUpperCase()!=='XOA'){toast('Chưa gõ đúng XOA — chưa xoá','err');return}
+    var b=this;b.disabled=true;b.textContent='Đang xoá…';
+    try{await run('deleteRecord',S.sheet,r.row,r.C);closeDrawer();
+      S.rows=S.rows.filter(function(x){return x!==r});S.rows.forEach(function(x){if(x.row>r.row)x.row--});show(S.view);
+      toast('Đã xoá đơn STT '+String(r.A).split('\n')[0],'ok');loadData(false)}
+    catch(e){toast(e.message,'err',7000);b.disabled=false;b.textContent='🗑 Xoá đơn'}};
   $('#dCopy').onclick=function(){var t=r.name+'\n'+r.addr+'\n'+r.E;var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Đã sao chép','ok')}catch(e){toast('Không sao chép được','err')}ta.remove()};
   $('#dSame').onclick=function(){closeDrawer();S.f.q=r.name;$('#gq').value=r.name;show('list');renderList()};
 }
 function nextStt(){var mx=0;S.rows.slice(-40).forEach(function(r){if(r.stt>mx)mx=r.stt});return mx+1}
-var APP_VER='25 · 09/10/2026';
+var APP_VER='26 · 09/10/2026';
 function toISO(x){x=String(x||'').trim();if(/^\d{4}-\d{2}-\d{2}$/.test(x))return x;var m=x.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2}|\d{4})$/);if(!m)return '';var y=m[3].length===2?'20'+m[3]:m[3],mo=+m[2],da=+m[1];if(mo<1||mo>12||da<1||da>31)return '';return y+'-'+pad(mo)+'-'+pad(da)}
 function whoList(){var a=((S.boot&&S.boot.handlers)||[]).map(function(x){return x.h});return uniq(a.concat(S.rows.map(function(x){return x.who})).filter(function(x){return x&&x!=='(Chưa ghi)'}))}
 function ksvOpts(cur){var hs=(S.boot&&S.boot.handlers)||[],seen={},o='<option value="">— Chưa phân công —</option>';cur=String(cur||'').trim();
