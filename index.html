@@ -763,7 +763,7 @@ function openRow(n){
   $('#dSame').onclick=function(){closeDrawer();S.f.q=r.name;$('#gq').value=r.name;show('list');renderList()};
 }
 function nextStt(){var mx=0;S.rows.slice(-40).forEach(function(r){if(r.stt>mx)mx=r.stt});return mx+1}
-var APP_VER='34 · 09/10/2026';
+var APP_VER='35 · 09/10/2026';
 function toISO(x){x=String(x||'').trim();if(/^\d{4}-\d{2}-\d{2}$/.test(x))return x;var m=x.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2}|\d{4})$/);if(!m)return '';var y=m[3].length===2?'20'+m[3]:m[3],mo=+m[2],da=+m[1];if(mo<1||mo>12||da<1||da>31)return '';return y+'-'+pad(mo)+'-'+pad(da)}
 function whoList(){var a=((S.boot&&S.boot.handlers)||[]).map(function(x){return x.h});return uniq(a.concat(S.rows.map(function(x){return x.who})).filter(function(x){return x&&x!=='(Chưa ghi)'}))}
 function ksvOpts(cur){var hs=(S.boot&&S.boot.handlers)||[],seen={},o='<option value="">— Chưa phân công —</option>';cur=String(cur||'').trim();
@@ -789,7 +789,7 @@ function openForm(n,pre,opt){opt=opt||{};
   if(!n&&!(ce('C')||ce('E'))){toast('Tài khoản chưa được phép nhập họ tên / nội dung nên không thêm được đơn mới','err',6000);return}
   if(!S.rows.length&&!S.sheet){toast('Chưa có dữ liệu để thêm đơn','err');return}
   var m=S.meta||DEF_META,gid=colGroups(m),r=n?byRow(n):null,v=r||{A:String(nextStt()),B:'',name:'',addr:'',soden:nextSoden(),date:todayISO()};if(pre){if(r){v={};for(var rk in r)v[rk]=r[rk]}for(var pk in pre)v[pk]=pre[pk]}
-  var show=function(i){return i<9||!(m.hidden&&m.hidden[i])};
+  var show=function(i){return i<9||isMgrC()||!(m.hidden&&m.hidden[i])};
   var who=whoList(),lab=function(i){var t=colLabel(i,m),nn=String(m.h5&&m.h5[i]||'').trim();return esc(t||('Cột '+LET19[i]))+(nn?' <span class="mut">(cột '+esc(nn)+')</span>':'')};
   var val=function(L){var x=v[L];return x==null?'':String(x)};
   var inp=function(id,labh,value,cls,ls){return '<div class="f '+(cls||'')+'"><label>'+labh+'</label><input type="text" id="'+id+'" value="'+esc(value)+'"'+(ls?' list="'+ls+'"':'')+'></div>'};
