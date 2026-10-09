@@ -226,7 +226,7 @@ var HUONG_LIST=['Phòng nghiệp vụ','Chuyển CQĐT','Chuyển VKS','Chuyển
 var PAL=['#14b8a6','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#10b981','#ec4899','#64748b'];
 
 /* ============ TRẠNG THÁI ============ */
-var S={token:'',st:null,meta:null,boot:null,sheet:'',rows:[],loading:false,view:'dash',period:'all',pf:'',pt:'',df:{},dfx:[],dsF:'',dsT:'',
+var S={token:'',st:null,meta:null,boot:null,sheet:'',rows:[],loading:false,view:'dash',period:'year',pf:'',pt:'',dOpen:false,df:{},dfx:[],dsF:'',dsT:'',
   f:{q:'',month:'',who:'',src:'',dv:'',huong:'',tt:'',from:'',to:'',sttFrom:'',sttTo:''},cf:[],sort:{k:'soden',d:-1},mode:'xl',page:1,per:50,ctx:null,charts:{}};
 
 function setTheme(t){document.documentElement.setAttribute('data-theme',t);lsSet('sd_theme',t);if(S.rows.length&&S.view==='dash')renderDash()}
@@ -418,7 +418,8 @@ function wChart(w,i,rows){var t=w.type;if(['bar','hbar','line','doughnut','pie']
 var DF_FIX=[['src','Nguồn đơn'],['loai','Loại việc'],['pl','Phân loại việc'],['huong','Kết quả / hướng xử lý'],['dv','Phòng / đơn vị xử lý'],['who','Người xử lý'],['tt','Trạng thái']];
 function dashOK(r){if(S.dsF!==''&&!(r.stt>=+S.dsF))return false;if(S.dsT!==''&&!(r.stt<=+S.dsT))return false;
   for(var id in S.df){var v=S.df[id];if(v==='')continue;if(dkey(dimOf(id),r)!==v)return false}return true}
-function dashFDesc(){var a=[];if(S.dsF!==''||S.dsT!=='')a.push('STT '+(S.dsF||'…')+' – '+(S.dsT||'…'));for(var id in S.df)if(S.df[id]!=='')a.push(dimOf(id).n+': '+(S.df[id]==='(Chưa ghi)'?'(chưa ghi)':S.df[id]));return a.join(' · ')}
+function dashFN(){var n=(S.dsF!==''||S.dsT!=='')?1:0;for(var id in S.df)if(S.df[id]!=='')n++;return n}
+function dashFDesc(){var a=[];if(S.dsF!==''||S.dsT!=='')a.push('STT '+(S.dsF||'…')+' – '+(S.dsT||'…'));for(var id in S.df)if(S.df[id]!=='')a.push((DF_FIX.filter(function(x){return x[0]===id}).map(function(x){return x[1]})[0]||dimOf(id).n)+': '+(S.df[id]==='(Chưa ghi)'?'(chưa ghi)':S.df[id]));return a.join(' · ')}
 function dashFBar(base){
   var ids=DF_FIX.map(function(x){return x[0]}).concat(S.dfx.filter(function(x){return DF_FIX.every(function(y){return y[0]!==x})}));
   var sel=function(id){var d=dimOf(id),cur=S.df[id]||'',a=aggr(base,id,0);if(cur&&!a.some(function(x){return x.k===cur}))a.push({k:cur,l:cur,n:0});
@@ -437,6 +438,8 @@ function bindDashF(){
   $$('[data-dfx]').forEach(function(b){b.onclick=function(ev){ev.preventDefault();var id=b.dataset.dfx;S.dfx=S.dfx.filter(function(x){return x!==id});delete S.df[id];re()}});
   if($('#dfAdd'))$('#dfAdd').onchange=function(){if(this.value&&S.dfx.indexOf(this.value)<0)S.dfx.push(this.value);re()};
   if($('#dfClr'))$('#dfClr').onclick=function(){S.df={};S.dsF=S.dsT='';re()};
+  if($('#dfClr2'))$('#dfClr2').onclick=function(e){e.preventDefault();S.df={};S.dsF=S.dsT='';re()};
+  $('#btnDF').onclick=function(){S.dOpen=!S.dOpen;re()};
 }
 function renderDash(){
   var el=$('#v-dash');
@@ -460,8 +463,8 @@ function renderDash(){
   el.innerHTML='<div class="bar" style="justify-content:space-between"><div><div class="h1">Thống kê tình hình đơn</div><div class="sub" style="margin:0">'+esc(S.sheet)+' — '+S.rows.length+' đơn trong sổ</div></div>'
    +'<div class="chips">'+P.map(function(p){return '<button class="chip'+(S.period===p[0]?' on':'')+'" data-p="'+p[0]+'">'+p[1]+'</button>'}).join('')
    +'<input type="date" id="pf" value="'+esc(S.pf)+'" style="width:auto;padding:4px 7px"> – <input type="date" id="pt" value="'+esc(S.pt)+'" style="width:auto;padding:4px 7px">'
-   +'<button class="btn sm" id="btnRep">⬇ Xuất báo cáo Excel</button>'+(isAdm()?'<button class="btn sm" id="btnDashCfg" title="Thêm / bớt / sắp xếp các mục thống kê (áp dụng cho mọi tài khoản)">⚙ Tuỳ chỉnh thống kê</button>':'')+'</div></div>'
-   +dashFBar(base)+'<div class="kpis">'+(cfg.kpis||[]).filter(function(k){return KV[k]}).map(function(k){var v=KV[k];return '<div class="card kpi"><div class="ic '+v[1]+'">'+ico(v[2])+'</div><div><b>'+v[0]+'</b><span>'+esc(v[3]||KN[k])+'</span></div></div>'}).join('')+'</div>'
+   +'<button class="btn sm'+(S.dOpen?' pri':'')+'" id="btnDF" title="Hiện / ẩn bộ lọc thống kê">⚲ Bộ lọc'+(dashFN()?' <b>('+dashFN()+')</b>':'')+'</button><button class="btn sm" id="btnRep">⬇ Xuất báo cáo Excel</button>'+(isAdm()?'<button class="btn sm" id="btnDashCfg" title="Thêm / bớt / sắp xếp các mục thống kê (áp dụng cho mọi tài khoản)">⚙ Tuỳ chỉnh thống kê</button>':'')+'</div></div>'
+   +(S.dOpen?dashFBar(base):(dashFDesc()?'<div class="mut" style="margin:-4px 0 10px">Đang lọc: <b>'+esc(dashFDesc())+'</b> <a href="#" id="dfClr2">✕ Bỏ lọc</a></div>':''))+'<div class="kpis">'+(cfg.kpis||[]).filter(function(k){return KV[k]}).map(function(k){var v=KV[k];return '<div class="card kpi"><div class="ic '+v[1]+'">'+ico(v[2])+'</div><div><b>'+v[0]+'</b><span>'+esc(v[3]||KN[k])+'</span></div></div>'}).join('')+'</div>'
    +'<div class="grid2">'+cfg.widgets.map(function(w,i){return '<div class="card"'+(w.w===2?' style="grid-column:1/-1"':'')+'><h3>'+esc(w.t||W_TYPES.filter(function(x){return x[0]===w.type}).map(function(x){return x[1]})[0]||'')+(w.type==='late'?' <span class="badge b-rd">'+ctx.late.length+'</span>':'')+'</h3>'+wBody(w,i,ctx)+'</div>'}).join('')+'</div>';
   $$('[data-p]',el).forEach(function(b){b.onclick=function(){S.period=b.dataset.p;S.pf=S.pt='';renderDash()}});
   $('#pf').onchange=function(){S.pf=this.value;S.period='custom';renderDash()};$('#pt').onchange=function(){S.pt=this.value;S.period='custom';renderDash()};
@@ -760,7 +763,7 @@ function openRow(n){
   $('#dSame').onclick=function(){closeDrawer();S.f.q=r.name;$('#gq').value=r.name;show('list');renderList()};
 }
 function nextStt(){var mx=0;S.rows.slice(-40).forEach(function(r){if(r.stt>mx)mx=r.stt});return mx+1}
-var APP_VER='32 · 09/10/2026';
+var APP_VER='33 · 09/10/2026';
 function toISO(x){x=String(x||'').trim();if(/^\d{4}-\d{2}-\d{2}$/.test(x))return x;var m=x.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2}|\d{4})$/);if(!m)return '';var y=m[3].length===2?'20'+m[3]:m[3],mo=+m[2],da=+m[1];if(mo<1||mo>12||da<1||da>31)return '';return y+'-'+pad(mo)+'-'+pad(da)}
 function whoList(){var a=((S.boot&&S.boot.handlers)||[]).map(function(x){return x.h});return uniq(a.concat(S.rows.map(function(x){return x.who})).filter(function(x){return x&&x!=='(Chưa ghi)'}))}
 function ksvOpts(cur){var hs=(S.boot&&S.boot.handlers)||[],seen={},o='<option value="">— Chưa phân công —</option>';cur=String(cur||'').trim();
