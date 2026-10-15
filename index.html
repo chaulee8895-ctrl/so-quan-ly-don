@@ -68,6 +68,7 @@ tr.rw{cursor:pointer}tr.rw:hover td{background:color-mix(in srgb,var(--pri) 6%,t
 .mut{color:var(--mut);font-size:12px}
 .fixq{margin-left:8px;border:1px solid #f59e0b;background:#fffbeb;color:#b45309;border-radius:6px;font-size:11.5px;padding:1px 7px;cursor:pointer;font-weight:600}.fixq:hover{background:#fef3c7}.nbadge{margin-left:auto;background:#dc2626;color:#fff;border-radius:999px;font-size:11px;font-weight:700;padding:1px 7px;min-width:18px;text-align:center}
 .dfbar{padding:10px 12px;margin-bottom:12px}.dfr{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:flex-end}.dfl{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--mut,#64748b)}.dfl>span{font-weight:600}.dfl select,.dfl input{width:auto;min-width:110px;max-width:200px;padding:4px 7px;font-size:13px}.dfl input[type=number]{width:90px;min-width:0}.dfl select.on{border-color:#0f766e;box-shadow:0 0 0 2px rgba(15,118,110,.18)}.dfx{color:#dc2626;text-decoration:none;margin-left:4px;font-weight:700}
+.dmyw{display:inline-flex;align-items:center;position:relative;gap:2px;max-width:100%}.dmyw .dmyt{width:118px;min-width:0}.f .dmyw{display:flex}.f .dmyw .dmyt{flex:1;width:auto}.dmyb{border:0;background:transparent;cursor:pointer;font-size:15px;padding:0 3px;line-height:1}.dmyo{position:absolute!important;left:0;bottom:0;width:1px!important;height:1px!important;opacity:0;pointer-events:none;padding:0!important;border:0!important}
 .badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
 .b-gr{background:var(--gr-soft);color:var(--gr)}.b-bl{background:var(--blue-soft);color:var(--blue)}.b-am{background:var(--amb-soft);color:var(--amb)}.b-rd{background:var(--red-soft);color:var(--red)}.b-vi{background:var(--vio-soft);color:var(--vio)}.b-mu{background:var(--bg);color:var(--mut);border:1px solid var(--line)}
 .pager{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:10px;flex-wrap:wrap}
@@ -763,7 +764,7 @@ function openRow(n){
   $('#dSame').onclick=function(){closeDrawer();S.f.q=r.name;$('#gq').value=r.name;show('list');renderList()};
 }
 function nextStt(){var mx=0;S.rows.slice(-40).forEach(function(r){if(r.stt>mx)mx=r.stt});return mx+1}
-var APP_VER='35 · 09/10/2026';
+var APP_VER='36 · 15/10/2026';
 function toISO(x){x=String(x||'').trim();if(/^\d{4}-\d{2}-\d{2}$/.test(x))return x;var m=x.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2}|\d{4})$/);if(!m)return '';var y=m[3].length===2?'20'+m[3]:m[3],mo=+m[2],da=+m[1];if(mo<1||mo>12||da<1||da>31)return '';return y+'-'+pad(mo)+'-'+pad(da)}
 function whoList(){var a=((S.boot&&S.boot.handlers)||[]).map(function(x){return x.h});return uniq(a.concat(S.rows.map(function(x){return x.who})).filter(function(x){return x&&x!=='(Chưa ghi)'}))}
 function ksvOpts(cur){var hs=(S.boot&&S.boot.handlers)||[],seen={},o='<option value="">— Chưa phân công —</option>';cur=String(cur||'').trim();
@@ -1245,6 +1246,27 @@ function userForm(u){
     this.disabled=true;try{await run('saveUser',o,isNew);closeDrawer();toast('Đã lưu tài khoản','ok');renderUsers()}catch(e){toast(e.message,'err',7000);this.disabled=false}
   };
 }
+
+/* ============ Ô NGÀY dd/mm/yyyy (thay cho ô ngày mặc định của trình duyệt) ============ */
+function isoToDmy(v){var m=String(v||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?m[3]+'/'+m[2]+'/'+m[1]:''}
+function dmyToIso(t){t=String(t||'').trim();if(!t)return '';var m=t.match(/^(\d{1,2})[\/\-.\s](\d{1,2})[\/\-.\s](\d{2}|\d{4})$/)||t.match(/^(\d{2})(\d{2})(\d{4})$/);if(!m)return null;
+  var d=+m[1],mo=+m[2],y=+m[3];if(m[3].length===2)y+=2000;var dt=new Date(y,mo-1,d);if(dt.getFullYear()!==y||dt.getMonth()!==mo-1||dt.getDate()!==d)return null;return y+'-'+pad(mo)+'-'+pad(d)}
+function dmyEnhance(root){(root.querySelectorAll?root.querySelectorAll('input[type=date]:not([data-dmy])'):[]).forEach(function(o){
+  o.setAttribute('data-dmy','1');
+  var w=document.createElement('span');w.className='dmyw';
+  var t=document.createElement('input');t.type='text';t.className='dmyt';t.placeholder='dd/mm/yyyy';t.inputMode='numeric';t.autocomplete='off';t.value=isoToDmy(o.value);if(o.title)t.title=o.title;if(o.disabled)t.disabled=true;
+  var st=o.getAttribute('style');if(st)t.setAttribute('style',st);
+  var b=document.createElement('button');b.type='button';b.className='dmyb';b.tabIndex=-1;b.title='Chọn ngày trên lịch';b.textContent='📅';
+  o.parentNode.insertBefore(w,o);w.appendChild(t);w.appendChild(b);w.appendChild(o);o.classList.add('dmyo');
+  var fire=function(){['input','change'].forEach(function(e){o.dispatchEvent(new Event(e,{bubbles:true}))})};
+  var commit=function(){var v=dmyToIso(t.value);if(v===null){toast('Ngày không hợp lệ — nhập theo dạng ngày/tháng/năm, ví dụ 15/10/2026','err',5000);t.value=isoToDmy(o.value);return}
+    if(v!==o.value){o.value=v;t.value=isoToDmy(v);fire()}else t.value=isoToDmy(v)};
+  t.addEventListener('change',commit);t.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();commit()}});
+  o.addEventListener('change',function(){t.value=isoToDmy(o.value)});o.addEventListener('input',function(){t.value=isoToDmy(o.value)});
+  b.onclick=function(){if(o.disabled||t.disabled)return;try{o.showPicker()}catch(e){try{o.focus();o.click()}catch(e2){}}};
+  new MutationObserver(function(){t.disabled=o.disabled}).observe(o,{attributes:true,attributeFilter:['disabled']});
+ })}
+dmyEnhance(document);new MutationObserver(function(ms){ms.forEach(function(m){m.addedNodes.forEach(function(n){if(n.nodeType===1){if(n.matches&&n.matches('input[type=date]'))dmyEnhance(n.parentNode||document);else dmyEnhance(n)}})})}).observe(document.body,{childList:true,subtree:true});
 
 boot();
 </script>
