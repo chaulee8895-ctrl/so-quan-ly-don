@@ -763,7 +763,7 @@ function openRow(n){
   $('#dSame').onclick=function(){closeDrawer();S.f.q=r.name;$('#gq').value=r.name;show('list');renderList()};
 }
 function nextStt(){var mx=0;S.rows.slice(-40).forEach(function(r){if(r.stt>mx)mx=r.stt});return mx+1}
-var APP_VER='37 · 15/10/2026';
+var APP_VER='38 · 09/11/2026';
 function toISO(x){x=String(x||'').trim();if(/^\d{4}-\d{2}-\d{2}$/.test(x))return x;var m=x.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2}|\d{4})$/);if(!m)return '';var y=m[3].length===2?'20'+m[3]:m[3],mo=+m[2],da=+m[1];if(mo<1||mo>12||da<1||da>31)return '';return y+'-'+pad(mo)+'-'+pad(da)}
 function whoList(){var a=((S.boot&&S.boot.handlers)||[]).map(function(x){return x.h});return uniq(a.concat(S.rows.map(function(x){return x.who})).filter(function(x){return x&&x!=='(Chưa ghi)'}))}
 function ksvOpts(cur){var hs=(S.boot&&S.boot.handlers)||[],seen={},o='<option value="">— Chưa phân công —</option>';cur=String(cur||'').trim();
@@ -937,6 +937,7 @@ async function ensurePhieu0(){
      +'})()}'
      +'if(!solo)document.addEventListener("click",function(e){var t=e.target&&e.target.closest&&e.target.closest("#btnGQThuMuc,#btnTkDir,#btnLuuTKDir");if(t){e.stopPropagation();e.preventDefault();P.postMessage({type:"gqd-needwin"},"*")}},true);'
      +'window.addEventListener("load",function(){document.body.appendChild(b);P.postMessage({type:"gqd-ready"},"*")});})();'+'<'+'/script>';
+    html=patchPhieu(html);
     var i=html.search(/<head[^>]*>/i);
     if(i>=0){var m=html.match(/<head[^>]*>/i)[0];html=html.slice(0,i+m.length)+head+html.slice(i+m.length)}else html=head+html;
     var j=html.lastIndexOf('</body>');html=j>=0?html.slice(0,j)+boot+html.slice(j):html+boot;
@@ -1248,6 +1249,15 @@ function userForm(u){
 }
 
 /* ============ Ô NGÀY dd/mm/yyyy (thay cho ô ngày mặc định của trình duyệt) ============ */
+/* Sửa công cụ Tạo phiếu khi nạp vào app: ô "Địa chỉ liên hệ (nếu khác)" -> "Số điện thoại" */
+function patchPhieu(h){
+  h=h.replace(/<label>\s*Địa chỉ liên hệ\s*\(nếu khác\)\s*<\/label>\s*<input([^>]*)id="lienhe"([^>]*)>/,'<label>Số điện thoại</label><input type="tel" inputmode="tel" id="lienhe" placeholder="VD: 0912 345 678" autocomplete="off">');
+  ['tbKinhGui','luKinhGui'].forEach(function(fn){var a=h.indexOf('function '+fn+'(');if(a<0)return;var b=h.indexOf('return "Kính gửi:',a);if(b<0||b-a>800)return;
+    h=h.slice(0,a)+h.slice(a,b).replace(/if\s*\(\s*p\.lienhe\s*\)\s*s\s*\+=\s*" \(địa chỉ liên hệ: "\s*\+\s*p\.lienhe\s*\+\s*"\)";/,'')+h.slice(b)});
+  h=h.replace(/" \(địa chỉ liên hệ: "\s*\+\s*(\w+)\.lienhe\s*\+\s*"\)"/g,'", số điện thoại: "+$1.lienhe');
+  h=h.replace(/\["lienhe",(\s*)"Địa chỉ liên hệ"\]/,'["lienhe",$1"Số điện thoại"]');
+  h=h.replace(/- lienhe: [^"\\]*/,'- lienhe: số điện thoại của chính người đó ghi trong đơn (giữ nguyên các chữ số), không có thì rỗng.');
+  return h}
 function dmyKit(W,D,TOAST){
  var pad2=function(n){return (n<10?'0':'')+n};
  var isoToDmy=function(v){var m=String(v||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?m[3]+'/'+m[2]+'/'+m[1]:''};
